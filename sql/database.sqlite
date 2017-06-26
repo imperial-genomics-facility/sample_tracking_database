@@ -1,0 +1,36 @@
+BEGIN TRANSACTION;
+CREATE TABLE "freezer" (
+	`freezer_label`	varchar(10) NOT NULL UNIQUE,
+        `shelf_count` INTEGER DEFAULT 3,
+        `rack_per_shelf` INTEGER DEFAULT 3,
+        `rack_space_count` INTEGER DEFAULT 20,
+        `box_per_rack` INTEGER DEFAULT 1,
+        `plate_per_rack` INTEGER DEFAULT 3,
+	`location`	varchar(10),
+	`comment`	varchat(10)
+);
+
+CREATE TABLE "box" (
+           `box_barcode`   TEXT,
+           `box_color`   TEXT CHECK(box_color IN ( 'red' , 'blue', 'white', 'green' , NULL ))
+);
+
+CREATE TABLE "sample_tracking" (
+	`sample_id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	`sample_if_id`	TEXT NOT NULL UNIQUE,
+	`project_igf_id`	TEXT NOT NULL,
+	`date_submitted`	date NOT NULL DEFAULT current_date,
+	`box_barcode`	TEXT,
+	`tube_container_id`	TEXT,
+	`plate_barcode`	TEXT,
+	`plate_coordinate_x`	TEXT DEFAULT NULL CHECK(plate_coordinate_x IN ( 'A' , 'B' , 'C' , 'D' , 'E' , 'F' , 'G' , 'H'  )),
+	`plate_coordinate_y`	TEXT DEFAULT NULL CHECK(plate_coordinate_y IN ( '1' , '2' , '3' , '4' , '5' , '6' , '7' , '8' , '9' , '10' , '11' , '12'  )),
+	`freezer_label`	TEXT,
+	`shelf`	int NOT NULL CHECK(shelf in ( 1 , 2 , 3 , 4 , 5 )),
+	`rack`	TEXT NOT NULL CHECK(rack in ( 'S_A' , 'S_B' , 'S_C' , 'L_A' , 'L_B' , 'L_C' )),
+	FOREIGN KEY(`freezer_label`) REFERENCES `freezer`(`freezer_label`),
+	FOREIGN KEY(`box_barcode`) REFERENCES `box`(`box_barcode`)
+);
+
+
+COMMIT;
