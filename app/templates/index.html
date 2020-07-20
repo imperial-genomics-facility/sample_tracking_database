@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}IGFTools - Home{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script>
+    $(document).ready(function () {
+      $(".nav li").removeClass("active");
+      $('#home_nav').addClass('active');
+    });
+  </script>
+{% endblock %}
+
+
+{% block body %}
+{{ super() }}
+<div class="container-fluid">
+  <h1>IGF tools</h1>
+  <div class="container-fluid">
+    <h4>List of available options</h4>
+    <ul>
+      <li><a href="/covcalculator">Sequencing coverage calculator:</a> Sequencing covarage calculator for IGF team.</li>
+      <li><a href="/metadata">Reformat metadata spreadsheet:</a> Correct IGF metadata files to meet pipeline requirements.</li>
+      <li><a href="/samplesheet">Reformat samplesheet file:</a> Reformat Samplesheet files.</li>
+      <li><a href="/validation">Validate metadata and samplesheet files:</a> Validate samplesheet and metadata files.</li>
+      <li><a href="/help">Help documents</a></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

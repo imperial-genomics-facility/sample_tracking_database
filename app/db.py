@@ -11,10 +11,11 @@ def get_db():
   '''
   try:
       db = getattr(g, "_database", None)
-      DB_URI = current_app.config["DB_URI"]
-      DB_NAME = current_app.config["DB_NAME"]
+      #DB_URI = current_app.config["DB_URI"]
+      #DB_NAME = current_app.config["DB_NAME"]
       if db is None:
-        db = g._database = MongoClient(DB_URI)[DB_NAME]
+        #db = g._database = MongoClient(DB_URI)[DB_NAME]
+        db = g._database = MongoClient('mongodb://root:example@192.168.99.100:27017').get_database('test')
       return db
   except Exception as _:
     raise
@@ -35,7 +36,7 @@ def get_users(name_pattern='',page=0,users_per_page=20):
         }
       }, {
         '$sort': {
-          'user_id': 1
+          'user_id': -1
         }
       }, {
         '$skip': skip_count
@@ -114,7 +115,8 @@ def get_quotes(search_pattern='',page=0,quotes_per_page=20):
     }]
     quotes_list = list(db.quotes.aggregate(pipeline))
     return quotes_list
-  except Exception as _:
+  except Exception as e:
+    print(e)
     return None
 
 def get_user_by_user_id(user_id):

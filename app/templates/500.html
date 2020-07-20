@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}IGFTools - unknown error{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script>
+    $(document).ready(function () {
+      $(".nav li").removeClass("active");
+    });
+  </script>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+  <h1>Something is not right, check the input files and submit again.</h1>
+</div>
+{% endblock %}
