@@ -1,0 +1,18 @@
+<HTML>
+    <body>
+        <h2>Search projects</h2>
+        <p>
+          <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            {{ form.project_igf_id.label }}<br>{{ form.project_igf_id(size=30) }}
+            <p>
+              {{ form.submit() }}<br><h5>Search projects</h5>
+            </p>
+          </form>
+        </p>
+        <h2>Projects data</h2>
+        <p>
+        {{ project_list|safe }}
+        </p>
+    </body>
+</HTML>

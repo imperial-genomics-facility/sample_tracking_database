@@ -110,6 +110,7 @@ def get_quotes(search_pattern='',page=0,quotes_per_page=20):
       '$project': {
         '_id': 0,
         'quote_id':1,
+        'quotes_legacy_id':1,
         'Issued':1
       }
     }]
@@ -134,7 +135,39 @@ def get_quote_by_quote_id(quote_id):
   '''
   '''
   try:
-    quote_record = db.quotes.find_one({'quote_id':quote_id},{'_id':0})
+    pipeline = [{
+      '$match': {
+        'quote_id': quote_id
+        }
+      }, {
+      '$lookup': {
+        'from': 'user', 
+        'let': {
+          'user_list': '$user_list'
+          }, 
+        'pipeline': [{
+          '$match': {
+            '$expr': {
+              '$in': ['$user_id', '$$user_list']
+              }
+            }
+          }, {
+          '$project': {
+            '_id': 0, 
+            'email': 0
+            }
+          }], 
+        'as': 'users'
+        }
+      }, {
+      '$project': {
+        '_id': 0, 
+        'user_list': 0
+        }
+      }, {
+      '$limit': 1
+    }]
+    quote_record = db.quotes.aggregate(pipeline).next()
     return quote_record
   except (StopIteration,InvalidId) as _:
     return None
@@ -145,7 +178,39 @@ def get_project_by_project_id(project_id):
   '''
   '''
   try:
-    project_record = db.projects.find_one({'project_id':project_id},{'_id':0})
+    pipeline = [{
+      '$match': {
+        'project_id': project_id
+        }
+      }, {
+      '$lookup': {
+        'from': 'user', 
+        'let': {
+          'user_list': '$user_list'
+          }, 
+        'pipeline': [{
+          '$match': {
+            '$expr': {
+              '$in': ['$user_id', '$$user_list']
+              }
+            }
+          }, {
+          '$project': {
+            '_id': 0, 
+            'email': 0
+            }
+          }], 
+        'as': 'users'
+        }
+      }, {
+      '$project': {
+        '_id': 0, 
+        'user_list': 0
+        }
+      }, {
+      '$limit': 1
+      }]
+    project_record = db.projects.aggregate(pipeline).next()
     return project_record
   except (StopIteration,InvalidId) as _:
     return None

@@ -1,5 +1,5 @@
-import json
-from flask import Flask
+import os
+from flask import Flask,escape,redirect,url_for
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf.csrf import CSRFProtect
@@ -10,8 +10,12 @@ from app.db import get_project_by_project_id,get_quote_by_quote_id,get_quotes_fo
 from app.db import get_projects_for_user_id,get_samples_for_project_id,get_libraries_for_project_id
 from flask import render_template,flash,Response,request
 import pandas as pd
+from flask_wtf import FlaskForm
+from wtforms.fields import SubmitField,StringField,SelectField
+from wtforms import validators
 
 app = Flask(__name__)
+app.secret_key = os.urandom(12)
 bootstrap = Bootstrap()
 moment = Moment()
 csrfprotect = CSRFProtect()
@@ -20,35 +24,63 @@ bootstrap.init_app(app)
 moment.init_app(app)
 csrfprotect.init_app(app)
 
-@app.route('/quotes',methods=['GET'])
+class Quotes_search_form(FlaskForm):
+  legacy_quote_id = \
+    StringField('Quotes id',validators=[validators.length(min=1,max=20)])
+  submit = SubmitField('Search quotes')
+
+@app.route('/quotes',methods=('GET', 'POST'))
 def quote_home():
   try:
-      quotes_per_page = 20
-      quotes_list = \
-        get_quotes(
-          search_pattern='',
-          page=0,
-          quotes_per_page=quotes_per_page)
-      quotes_list = \
-        pd.DataFrame(quotes_list).\
-        to_html(index=False)
-      return render_template('quote_home.html',quotes_list=quotes_list)
+    quotes_per_page = 20
+    page = 0
+    legacy_quote_id = ''
+    form = Quotes_search_form(request.form)
+    if form.validate_on_submit():
+      legacy_quote_id = form.legacy_quote_id.data
+      legacy_quote_id = legacy_quote_id.strip()
+      legacy_quote_id = escape(legacy_quote_id)
+    else:
+      flash('Bad request')
+      redirect(url_for('quote_home'))
+
+    quotes_list = \
+      get_quotes(
+        search_pattern=legacy_quote_id,
+        page=page,
+        quotes_per_page=quotes_per_page)
+    quotes_list = \
+      pd.DataFrame(quotes_list).\
+      to_html(index=False)
+    return render_template('quote_home.html',form=form,quotes_list=quotes_list)
   except Exception as e:
     print(e)
 
-@app.route('/users',methods=['GET'])
+class User_search_form(FlaskForm):
+  name = \
+    StringField('name',validators=[validators.length(min=1,max=20)])
+  submit = SubmitField('Search users')
+
+@app.route('/users',methods=('GET','POST'))
 def user_home():
   try:
-      users_per_page = 20
-      user_list = \
-        get_users(
-          name_pattern='',
-          page=0,
-          users_per_page=users_per_page)
-      user_list = \
-        pd.DataFrame(user_list).\
-        to_html(index=False)
-      return render_template('user_home.html',user_list=user_list)
+    users_per_page = 20
+    page = 0
+    form = User_search_form(request.form)
+    name = ''
+    if form.validate_on_submit():
+      name = form.name.data
+      name = name.strip()
+      name = escape(name)
+    user_list = \
+      get_users(
+        name_pattern=name,
+        page=page,
+        users_per_page=users_per_page)
+    user_list = \
+      pd.DataFrame(user_list).\
+      to_html(index=False)
+    return render_template('user_home.html',form=form,user_list=user_list)
   except Exception as e:
     print(e)
 
@@ -85,19 +117,33 @@ def user_info(user_id):
   except Exception as e:
     print(e)
 
-@app.route('/projects',methods=['GET'])
+class Project_search_form(FlaskForm):
+  project_igf_id = \
+    StringField('Project igf id',validators=[validators.length(min=1,max=30)])
+  submit = SubmitField('Search projects')
+
+@app.route('/projects',methods=('GET','POST'))
 def project_home():
   try:
-      projects_per_page = 20
-      project_list = \
-        get_projects(
-          search_pattern='',
-          page=0,
-          projects_per_page=projects_per_page)
-      project_list = \
-        pd.DataFrame(project_list).\
-        to_html(index=False)
-      return render_template('project_home.html',project_list=project_list)
+    projects_per_page = 20
+    project_igf_id = ''
+    page = 0
+    form = Project_search_form(request.form)
+    if form.validate_on_submit():
+      project_igf_id = form.project_igf_id.data
+      project_igf_id = project_igf_id.strip()
+      project_igf_id = escape(project_igf_id)
+    else:
+      redirect(url_for('project_home'))
+    project_list = \
+      get_projects(
+        search_pattern=project_igf_id,
+        page=page,
+        projects_per_page=projects_per_page)
+    project_list = \
+      pd.DataFrame(project_list).\
+      to_html(index=False)
+    return render_template('project_list.html',form=form,project_list=project_list)
   except Exception as e:
     print(e)
 
@@ -121,7 +167,7 @@ def quote_info(quote_id):
       pd.DataFrame([quote_record]).\
       fillna('').T.\
       to_html(index=True)
-    return render_template('quote_home.html',quotes_list=quote_record)
+    return render_template('quote_info.html',quotes_list=quote_record)
   except Exception as e:
     print(e)
 
@@ -137,7 +183,7 @@ def user_quotes_info(user_id):
     quotes_list = \
       pd.DataFrame(quotes_list).\
         to_html(index=False)
-    return render_template('quote_home.html',quotes_list=quotes_list)
+    return render_template('quote_info.html',quotes_list=quotes_list)
   except Exception as e:
     print(e)
 

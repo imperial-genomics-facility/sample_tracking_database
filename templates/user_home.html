@@ -1,7 +1,18 @@
 <HTML>
     <body>
+        <h2>Search users</h2>
+        <p>
+          <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            {{ form.name.label }}<br>{{ form.name(size=30) }}
+            <p>
+              {{ form.submit() }}<br><h5>Search name</h5>
+            </p>
+          </form>
+        </p>
+        <p>
         <h2>User info</h2>
         {{ user_list|safe }}
-        <p/>
+        </p>
     </body>
 </HTML>
