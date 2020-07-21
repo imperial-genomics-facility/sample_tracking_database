@@ -78,7 +78,8 @@ def get_projects(search_pattern='',page=0,projects_per_page=20):
       '$project': {
         '_id': 0,
         'project_id':1,
-        'project_igf_id':1
+        'project_igf_id':1,
+        'Issued':1
       }
     }]
     projects_list = list(db.projects.aggregate(pipeline))
@@ -114,11 +115,49 @@ def get_quotes(search_pattern='',page=0,quotes_per_page=20):
         'Issued':1
       }
     }]
-    quotes_list = list(db.quotes.aggregate(pipeline))
+    quotes_list = db.quotes.aggregate(pipeline)
     return quotes_list
   except Exception as e:
     print(e)
     return None
+
+def get_total_pages(collection_name,search_pattern=''):
+  try:
+    lookup_key = ''
+    if collection_name == 'quotes':
+      lookup_key = 'quotes_legacy_id'
+    elif collection_name == 'projects':
+      lookup_key = 'project_igf_id'
+    elif collection_name == 'user':
+      lookup_key = 'name'
+    else:
+      raise ValueError('Collection {0} not supported'.\
+                         format(collection_name))
+    pipeline = [{
+      '$match': {
+        lookup_key: {
+          '$regex': search_pattern, 
+          '$options': 'i'
+          }
+        }
+      }, {
+      '$count': 'total_rows'
+      }]
+    if collection_name == 'quotes':
+      total_rows = db.quotes.aggregate(pipeline).next()
+    elif collection_name == 'projects':
+      total_rows = db.projects.aggregate(pipeline).next()
+    elif collection_name == 'user':
+      total_rows = db.user.aggregate(pipeline).next()
+    else:
+      raise ValueError('Collection {0} not supported'.\
+                         format(collection_name))
+    total_rows = total_rows.get('total_rows')
+    return total_rows
+  except (StopIteration,InvalidId) as _:
+    return None
+  except Exception as _:
+    return {}
 
 def get_user_by_user_id(user_id):
   '''
@@ -271,6 +310,8 @@ def get_quotes_for_user_id(user_id,page=0,quotes_per_page=20):
         '$limit': quotes_per_page
       }]
     quote_ids = list(db.user.aggregate(pipeline))
+    pipeline.append({'$count':'total_rows'})
+    total_rows = db.user.aggregate(pipeline).next().get('total_rows')
     return quote_ids
   except (StopIteration,InvalidId) as _:
     return None
@@ -301,7 +342,8 @@ def get_projects_for_user_id(user_id,page=0,projects_per_page=20):
       }, {
         '$project': {
           '_id': 0, 
-          'project_id': 1, 
+          'project_id': 1,
+          'project_igf_id':1,
           'Issued': 1
         }
       }], 
@@ -318,7 +360,8 @@ def get_projects_for_user_id(user_id,page=0,projects_per_page=20):
       }
     }, {
       '$project': {
-        'project_id': '$projects.project_id', 
+        'project_id': '$projects.project_id',
+        'project_igf_id': '$projects.project_igf_id',
         'issued': '$projects.Issued'
       }
     }, {
