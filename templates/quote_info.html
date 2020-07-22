@@ -1,7 +1,5 @@
-<HTML>
-    <body>
-        <p>
+{% extends "base.html" %}
+
+{% block content %}
             {{ quotes_list|safe }}
-            </p>
-        </body>
-</HTML>
+{% endblock %}

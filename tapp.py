@@ -67,12 +67,24 @@ def quote_home():
         total=total_rows,
         search=False,
         per_page=quotes_per_page,
-        record_name='quotes')
-
+        record_name='quotes',
+        css_framework='bootstrap4')
     quotes_list = list(quotes_list)
-    quotes_list = \
-      pd.DataFrame(quotes_list).\
-      to_html(index=False)
+    if len(quotes_list) > 0:
+      quotes_list = \
+        pd.DataFrame(quotes_list)
+      quotes_list['quote_id'] = \
+        quotes_list['quote_id'].\
+          map(lambda x: '<a href="{0}">{1}</a>'.\
+                        format(url_for('quote_info',quote_id=x),x))
+      quotes_list = \
+        quotes_list.\
+        to_html(
+          index=False,
+          escape=False,
+          classes='table table-hover table-responsive-sm')
+    else:
+      quotes_list = 'NO RECORDS FOUND'
     return render_template('quote_home.html',form=form,
                            quotes_list=quotes_list,
                            pagination=pagination)
@@ -106,7 +118,9 @@ def user_info(user_id):
         projects_per_page=100)
     projects_list = \
       pd.DataFrame(projects_list).\
-      to_html(index=False)
+      to_html(
+        index=False,
+        classes='table table-hover table-responsive-sm')
     return render_template(
       'user_info.html',
       user_list=user_record,
@@ -144,14 +158,18 @@ def user_home():
         total=total_rows,
         search=False,
         per_page=users_per_page,
-        record_name='users')
+        record_name='users',
+        css_framework='bootstrap4')
     user_list = pd.DataFrame(user_list)
     if len(user_list.index) > 0 :
       user_list['user_id'] = \
         user_list['user_id'].map(lambda x: '<a href="{0}">{1}</a>'.format(url_for('user_info',user_id=x),x))
     user_list = \
       user_list.\
-      to_html(index=False,escape=False)
+      to_html(
+        index=False,
+        escape=False,
+        classes='table table-hover table-responsive-sm')
     return render_template('user_home.html',
                            form=form,
                            user_list=user_list,
@@ -196,14 +214,18 @@ def project_home():
         total=total_rows,
         search=False,
         per_page=projects_per_page,
-        record_name='projects')
+        record_name='projects',
+        css_framework='bootstrap4')
     if len(project_list) > 0:
       project_list = pd.DataFrame(project_list)
       project_list['project_id'] = \
         project_list['project_id'].map(lambda x: '<a href="{0}">{1}</a>'.format(url_for('project_info',project_id=x),x))
       project_list = \
         project_list.\
-        to_html(index=False,escape=False)
+        to_html(
+          index=False,
+          escape=False,
+          classes='table table-hover table-responsive-sm')
     else:
       project_list = 'NO RECORDS DFOUND'
     return render_template('project_list.html',
@@ -219,8 +241,13 @@ def project_info(project_id):
     project_record = get_project_by_project_id(project_id=project_id)
     project_record = \
       pd.DataFrame([project_record]).\
-      fillna('').T.\
-      to_html(index=True)
+      fillna('').T
+    project_record.columns = ['Project data']
+    project_record = \
+      project_record.\
+      to_html(
+        index=True,
+        classes='table table-hover table-responsive-sm')
     return render_template('project_home.html',project_list=project_record)
   except Exception as e:
     print(e)
@@ -231,8 +258,13 @@ def quote_info(quote_id):
     quote_record = get_quote_by_quote_id(quote_id=quote_id)
     quote_record = \
       pd.DataFrame([quote_record]).\
-      fillna('').T.\
-      to_html(index=True)
+      fillna('').T
+    quote_record.columns = ['Quotes data']
+    quote_record = \
+      quote_record.\
+      to_html(
+        index=True,
+        classes='table table-hover table-responsive-sm')
     return render_template('quote_info.html',quotes_list=quote_record)
   except Exception as e:
     print(e)
@@ -257,7 +289,9 @@ def user_quotes_info(user_id):
         record_name='quotes')
     quotes_list = \
       pd.DataFrame(quotes_list).\
-        to_html(index=False)
+        to_html(
+          index=False,
+          classes='table table-hover table-responsive-sm')
     return render_template('quote_info.html',quotes_list=quotes_list,pagination=pagination)
   except Exception as e:
     print(e)
@@ -273,7 +307,9 @@ def user_projects_info(user_id):
         projects_per_page=20)
     projects_list = \
       pd.DataFrame(projects_list).\
-        to_html(index=False)
+        to_html(
+          index=False,
+          classes='table table-hover table-responsive-sm')
     return render_template('project_home.html',project_list=projects_list)
   except Exception as e:
     print(e)
@@ -290,7 +326,9 @@ def project_samples_info(project_id):
     samples_list = \
       pd.DataFrame(samples_list).\
       fillna('').\
-      to_html(index=False)
+      to_html(
+        index=False,
+        classes='table table-hover table-responsive-sm')
     return render_template('project_home.html',project_list=samples_list)
   except Exception as e:
     print(e)
@@ -307,7 +345,9 @@ def project_library_info(project_id):
     libraries_list = \
       pd.DataFrame(libraries_list).\
       fillna('').\
-      to_html(index=False)
+      to_html(
+        index=False,
+        classes='table table-hover table-responsive-sm')
     return render_template('project_home.html',project_list=libraries_list)
   except Exception as e:
     print(e)
