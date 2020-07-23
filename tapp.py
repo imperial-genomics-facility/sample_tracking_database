@@ -51,26 +51,18 @@ def quote_home():
     else:
       flash('Bad request')
       redirect(url_for('quote_home'))
-
+    print(legacy_quote_id)
     quotes_list = \
       get_quotes(
         search_pattern=legacy_quote_id,
         page=page-1,
         quotes_per_page=quotes_per_page)
-    total_rows = \
-      get_total_pages(
-        collection_name='quotes',
-        search_pattern=legacy_quote_id)
-    pagination = \
-      Pagination(
-        page=page,
-        total=total_rows,
-        search=False,
-        per_page=quotes_per_page,
-        record_name='quotes',
-        css_framework='bootstrap4')
     quotes_list = list(quotes_list)
-    if len(quotes_list) > 0:
+    if len(quotes_list)>0:
+      total_rows = \
+        get_total_pages(
+          collection_name='quotes',
+          search_pattern=legacy_quote_id)
       quotes_list = \
         pd.DataFrame(quotes_list)
       quotes_list['quote_id'] = \
@@ -85,6 +77,18 @@ def quote_home():
           classes='table table-hover table-responsive-sm')
     else:
       quotes_list = 'NO RECORDS FOUND'
+      total_rows = 0
+
+    pagination = \
+      Pagination(
+        page=page,
+        total=total_rows,
+        search=False,
+        per_page=quotes_per_page,
+        record_name='quotes',
+        css_framework='bootstrap4')
+    
+    
     return render_template('quote_home.html',form=form,
                            quotes_list=quotes_list,
                            pagination=pagination)
@@ -102,30 +106,48 @@ def user_info(user_id):
     user_record = get_user_by_user_id(user_id=user_id)
     user_record = \
       pd.DataFrame([user_record]).\
-      to_html(index=False)
+      to_html(
+        index=False,
+        classes='table table-hover table-responsive-sm')
     quotes_list = \
       get_quotes_for_user_id(
         user_id=user_id,
         page=0,
-        quotes_per_page=100)
+        quotes_per_page=200)
     quotes_list = \
-      pd.DataFrame(quotes_list).\
-      to_html(index=False)
-    projects_list = \
+      pd.DataFrame(quotes_list)
+    quotes_list['quote_id'] = \
+        quotes_list['quote_id'].\
+          map(lambda x: '<a href="{0}">{1}</a>'.\
+                        format(url_for('quote_info',quote_id=x),x))
+    quotes_list = \
+      quotes_list.\
+      to_html(
+        index=False,
+        escape=False,
+        classes='table table-hover table-responsive-sm')
+    project_list = \
       get_projects_for_user_id(
         user_id=user_id,
         page=0,
-        projects_per_page=100)
-    projects_list = \
-      pd.DataFrame(projects_list).\
+        projects_per_page=200)
+    project_list = \
+      pd.DataFrame(project_list)
+    project_list['project_id'] = \
+        project_list['project_id'].\
+          map(lambda x: '<a href="{0}">{1}</a>'.\
+            format(url_for('project_info',project_id=x),x))
+    project_list = \
+      project_list.\
       to_html(
         index=False,
+        escape=False,
         classes='table table-hover table-responsive-sm')
     return render_template(
       'user_info.html',
       user_list=user_record,
       quotes_list=quotes_list,
-      projects_list=projects_list)
+      projects_list=project_list)
   except Exception as e:
     print(e)
 
@@ -163,7 +185,9 @@ def user_home():
     user_list = pd.DataFrame(user_list)
     if len(user_list.index) > 0 :
       user_list['user_id'] = \
-        user_list['user_id'].map(lambda x: '<a href="{0}">{1}</a>'.format(url_for('user_info',user_id=x),x))
+        user_list['user_id'].\
+          map(lambda x: '<a href="{0}">{1}</a>'.\
+                        format(url_for('user_info',user_id=x),x))
     user_list = \
       user_list.\
       to_html(
@@ -219,7 +243,9 @@ def project_home():
     if len(project_list) > 0:
       project_list = pd.DataFrame(project_list)
       project_list['project_id'] = \
-        project_list['project_id'].map(lambda x: '<a href="{0}">{1}</a>'.format(url_for('project_info',project_id=x),x))
+        project_list['project_id'].\
+          map(lambda x: '<a href="{0}">{1}</a>'.\
+            format(url_for('project_info',project_id=x),x))
       project_list = \
         project_list.\
         to_html(
@@ -239,6 +265,26 @@ def project_home():
 def project_info(project_id):
   try:
     project_record = get_project_by_project_id(project_id=project_id)
+    users = project_record.get('users')
+    user_html = ['<ul>']
+    for i in users:
+      i_items = list()
+      for k,v in i.items():
+        if k=='user_id':
+          i_items.append('<a href="{0}">{1}</a>'.format(url_for('user_info',user_id=v),v))
+        else:
+          i_items.append('<a>{0}</a>'.format(v))
+      user_html.append('<li>{0}</li>'.format(': '.join(i_items)))
+    user_html.append('</ul>')
+    project_record['users'] = ''.join(user_html)
+    quotes_list = project_record.get('quotes_list')
+    quotes_html = ['<ul>']
+    quotes_html.\
+      extend(['<li><a href="{0}">{1}</a>'.\
+              format(url_for('quote_info',quote_id=i),i) 
+                for i in quotes_list])
+    quotes_html.append('<ul>')
+    project_record['quotes_list'] = ''.join(quotes_html)
     project_record = \
       pd.DataFrame([project_record]).\
       fillna('').T
@@ -247,6 +293,7 @@ def project_info(project_id):
       project_record.\
       to_html(
         index=True,
+        escape=False,
         classes='table table-hover table-responsive-sm')
     return render_template('project_home.html',project_list=project_record)
   except Exception as e:
@@ -256,6 +303,18 @@ def project_info(project_id):
 def quote_info(quote_id):
   try:
     quote_record = get_quote_by_quote_id(quote_id=quote_id)
+    users = quote_record.get('users')
+    user_html = ['<ul>']
+    for i in users:
+      i_items = list()
+      for k,v in i.items():
+        if k=='user_id':
+          i_items.append('<a href="{0}">{1}</a>'.format(url_for('user_info',user_id=v),v))
+        else:
+          i_items.append('<a>{0}</a>'.format(v))
+      user_html.append('<li>{0}</li>'.format(': '.join(i_items)))
+    user_html.append('</ul>')
+    quote_record['users'] = ''.join(user_html)
     quote_record = \
       pd.DataFrame([quote_record]).\
       fillna('').T
@@ -264,6 +323,7 @@ def quote_info(quote_id):
       quote_record.\
       to_html(
         index=True,
+        escape=False,
         classes='table table-hover table-responsive-sm')
     return render_template('quote_info.html',quotes_list=quote_record)
   except Exception as e:
@@ -344,7 +404,9 @@ def project_library_info(project_id):
         libraries_per_page=libraries_per_page)
     libraries_list = \
       pd.DataFrame(libraries_list).\
-      fillna('').\
+      fillna('')
+    libraries_list = \
+      libraries_list.\
       to_html(
         index=False,
         classes='table table-hover table-responsive-sm')
