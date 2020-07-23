@@ -49,8 +49,9 @@ def quote_home():
       legacy_quote_id = legacy_quote_id.strip()
       legacy_quote_id = escape(legacy_quote_id)
     else:
-      flash('Bad request')
-      redirect(url_for('quote_home'))
+      if request.method=='POST':
+        flash('Bad request')
+        redirect(url_for('quote_home'))
     print(legacy_quote_id)
     quotes_list = \
       get_quotes(
@@ -58,7 +59,7 @@ def quote_home():
         page=page-1,
         quotes_per_page=quotes_per_page)
     quotes_list = list(quotes_list)
-    if len(quotes_list)>0:
+    if len(quotes_list) > 0:
       total_rows = \
         get_total_pages(
           collection_name='quotes',
@@ -114,35 +115,41 @@ def user_info(user_id):
         user_id=user_id,
         page=0,
         quotes_per_page=200)
-    quotes_list = \
-      pd.DataFrame(quotes_list)
-    quotes_list['quote_id'] = \
+    if len(quotes_list) > 0:
+      quotes_list = \
+        pd.DataFrame(quotes_list)
+      quotes_list['quote_id'] = \
         quotes_list['quote_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
                         format(url_for('quote_info',quote_id=x),x))
-    quotes_list = \
-      quotes_list.\
-      to_html(
-        index=False,
-        escape=False,
-        classes='table table-hover table-responsive-sm')
+      quotes_list = \
+        quotes_list.\
+        to_html(
+          index=False,
+          escape=False,
+          classes='table table-hover table-responsive-sm')
+    else:
+      quotes_list = 'NO RECORD FOUND'
     project_list = \
       get_projects_for_user_id(
         user_id=user_id,
         page=0,
         projects_per_page=200)
-    project_list = \
-      pd.DataFrame(project_list)
-    project_list['project_id'] = \
+    if len(project_list) > 0:
+      project_list = \
+        pd.DataFrame(project_list)
+      project_list['project_id'] = \
         project_list['project_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
             format(url_for('project_info',project_id=x),x))
-    project_list = \
-      project_list.\
-      to_html(
-        index=False,
-        escape=False,
-        classes='table table-hover table-responsive-sm')
+      project_list = \
+        project_list.\
+        to_html(
+          index=False,
+          escape=False,
+          classes='table table-hover table-responsive-sm')
+    else:
+      project_list = 'NO RECORD FOUND'
     return render_template(
       'user_info.html',
       user_list=user_record,
@@ -164,7 +171,9 @@ def user_home():
       name = name.strip()
       name = escape(name)
     else:
-      redirect(url_for('user_home'))
+      if request.method=='POST':
+        flash('Bad request')
+        redirect(url_for('user_home'))
     user_list = \
       get_users(
         name_pattern=name,
@@ -219,7 +228,9 @@ def project_home():
       project_igf_id = project_igf_id.strip()
       project_igf_id = escape(project_igf_id)
     else:
-      redirect(url_for('project_home'))
+      if request.method=='POST':
+        flash('Bad request')
+        redirect(url_for('project_home'))
     project_list = \
       get_projects(
         search_pattern=project_igf_id,

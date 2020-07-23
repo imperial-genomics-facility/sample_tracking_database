@@ -79,6 +79,7 @@ def get_projects(search_pattern='',page=0,projects_per_page=20):
         '_id': 0,
         'project_id':1,
         'project_igf_id':1,
+        'status':'$Status',
         'Issued':1
       }
     }]
@@ -112,6 +113,7 @@ def get_quotes(search_pattern='',page=0,quotes_per_page=20):
         '_id': 0,
         'quote_id':1,
         'quotes_legacy_id':1,
+        'status':'$Status',
         'Issued':1
       }
     }]
@@ -281,6 +283,7 @@ def get_quotes_for_user_id(user_id,page=0,quotes_per_page=20):
           '$project': {
             '_id': 0, 
             'quote_id': 1,
+            'Status':1,
             'Issued':1
             }
           }], 
@@ -297,7 +300,8 @@ def get_quotes_for_user_id(user_id,page=0,quotes_per_page=20):
           }
       }, {
         '$project': {
-          'quote_id': '$quotes.quote_id', 
+          'quote_id': '$quotes.quote_id',
+          'status': '$quotes.Status',
           'issued': '$quotes.Issued'
           }
       }, {
@@ -344,6 +348,7 @@ def get_projects_for_user_id(user_id,page=0,projects_per_page=20):
           '_id': 0, 
           'project_id': 1,
           'project_igf_id':1,
+          'Status':1,
           'Issued': 1
         }
       }], 
@@ -362,6 +367,7 @@ def get_projects_for_user_id(user_id,page=0,projects_per_page=20):
       '$project': {
         'project_id': '$projects.project_id',
         'project_igf_id': '$projects.project_igf_id',
+        'status': '$projects.Status',
         'issued': '$projects.Issued'
       }
     }, {

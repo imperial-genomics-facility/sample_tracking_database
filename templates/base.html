@@ -20,3 +20,22 @@
       }
     </style>
 {% endblock %}
+
+{% block content %}
+  {% block flashed %}
+  <div class="container">
+  {% for message in get_flashed_messages() %}
+    {% if message.lower().startswith('failed') %}
+    <div class="alert alert-danger">
+    {% elif message.lower().startswith('success') %}
+    <div class="alert alert-success">
+    {% else %}
+    <div class="alert alert-warning">
+    {% endif %}
+    <button class="close" data-dismiss="alert">&times;</button>
+    {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endblock %}
+{% endblock %}
