@@ -8,10 +8,11 @@ from bson import json_util, ObjectId
 from app.db import get_quotes,get_users,get_projects,get_user_by_user_id
 from app.db import get_project_by_project_id,get_quote_by_quote_id,get_quotes_for_user_id,get_total_pages
 from app.db import get_projects_for_user_id,get_samples_for_project_id,get_libraries_for_project_id
+from app.db import get_active_projects_with_library
 from flask import render_template,flash,Response,request
 import pandas as pd
 from flask_wtf import FlaskForm
-from wtforms.fields import SubmitField,StringField,SelectField
+from wtforms.fields import SubmitField,StringField,SelectField,FormField,FieldList
 from wtforms import validators
 from flask_paginate import Pagination, get_page_parameter
 
@@ -424,6 +425,61 @@ def project_library_info(project_id):
     return render_template('project_home.html',project_list=libraries_list)
   except Exception as e:
     print(e)
+
+class Run_form(FlaskForm):
+  pass
+
+class Samplesheet_line_form(FlaskForm):
+  lane = SelectField(
+          'Lane',
+          choices=[(str(i),str(i)) for i in range(1,9)],
+          validators=[])
+  project_name = SelectField(
+                  'Project name',
+                  choices=[],
+                  validators=[])
+  pool_id = SelectField(
+              'Pool id',
+              choices=[(str(i),str(i)) for i in range(1,11)],
+              validators=[])
+
+class Samplesheet_file_form(FlaskForm):
+  rows = FieldList(FormField(Samplesheet_line_form),min_entries=1)
+  add_line = SubmitField(u'Add another line')
+  save_data = SubmitField(u'Save data')
+
+@app.route('/edit_run/<run_id>',methods=('GET','POST'))
+def edit_run(run_id):
+  try:
+    form = Samplesheet_file_form()
+    project_list = get_active_projects_with_library()
+    project_list = list(project_list)
+    if len(project_list) > 0:
+      project_list = project_list[0].get('valid_project_list')
+      project_list = [(i,i) for i in project_list]
+      project_list.insert(0,('None','None'))
+    else:
+      project_list = list(('None','None'))
+    if request.method=='GET':
+      for row in form.rows:
+        row.form.project_name.choices = project_list
+      return render_template('edit_run.html',form=form,data=None)
+    if request.method=='POST':
+      if form.add_line.data:
+        form.rows.append_entry()
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        return render_template('edit_run.html',form=form,data='A')
+      elif form.save_data.data:
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        if form.validate_on_submit():
+          return render_template('edit_run.html',form=form,data=form.rows.data)
+        else:
+          return render_template('edit_run.html',form=form,data='N')
+  except Exception as e:
+    print(e)
+
 
 if __name__=='__main__':
   app.run(debug=True)

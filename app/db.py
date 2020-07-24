@@ -466,3 +466,58 @@ def get_libraries_for_project_id(project_id,page=0,libraries_per_page=10):
     return None
   except Exception as _:
     return {}
+
+def get_active_projects_with_library():
+  try:
+    pipeline = [{
+      '$match': {
+        'Status': {
+          '$regex': 'open', 
+          '$options': 'i'
+          }
+        }
+      }, {
+      '$project': {
+        '_id': 0,
+        'project_id':1,
+        'project_igf_id': 1
+        }
+      }, {
+     '$lookup': {
+        'from': 'library', 
+        'localField': 'project_id', 
+        'foreignField': 'project_id', 
+        'as': 'library'
+        }
+      }, {
+      '$project': {
+        'project_igf_id': 1, 
+        'lib_count': {
+          '$size': '$library'
+          }
+        }
+      }, {
+      '$match': {
+        'lib_count': {
+          '$gt': 0
+          }
+        }
+      }, {
+      '$group': {
+        '_id': None, 
+        'valid_project_list': {
+          '$addToSet': '$project_igf_id'
+          }
+        }
+      }, {
+      '$project': {
+        '_id': 0
+        }
+      }]
+    valid_projects_list = db.projects.aggregate(pipeline)
+    return valid_projects_list
+  except (StopIteration,InvalidId) as e:
+    print(e)
+    return None
+  except Exception as _:
+    return {}

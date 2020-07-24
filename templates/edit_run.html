@@ -1,0 +1,20 @@
+<html>
+    <body>
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            {% for row in form.rows %}
+              <p>
+              {{ row.form.lane.label }}  {{ row.form.lane }}
+              {{ row.form.project_name.label }}  {{ row.form.project_name }}
+              {{ row.form.pool_id.label }}  {{ row.form.pool_id }}
+              </p>
+            {% endfor %}
+            <p>
+            {{ form.add_line() }}
+            </p>
+            {{ form.save_data() }}
+        </form>
+        <h4>Data</h4>
+        {{ data }}
+    </body>
+</html
