@@ -521,3 +521,51 @@ def get_active_projects_with_library():
     return None
   except Exception as _:
     return {}
+
+def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sampleshet_data=None):
+  try:
+    rec = db.planned_runs.find_one({'run_name':run_name})
+    if rec is None:
+      records = \
+        list(db.planned_runs.aggregate([{
+          "$group":{
+            "_id":None,
+            "max_id":{"$max":"$_id"}}
+          },{
+          "$project":{"_id":0}
+          }]))
+      if len(records) > 0 and \
+         'max_id' in records[0]:
+        max_id = records[0].get('max_id')
+        if max_id == None:
+          max_id = 0
+      else:
+        max_id = 0
+      new_id = max_id + 1
+      new_run = \
+        dict(
+          _id=new_id,
+          run_id='IGFSR{:0>5}'.format(new_id),
+          run_name=run_name,
+          run_type=run_type,
+          status=status,
+          seqrun_id=seqrun_id,
+          sampleshet_data=sampleshet_data
+        )
+      planned_runs.insert_one(new_run)
+    else:
+      response = \
+        planned_runs.\
+          update_one({
+            'run_name':run_name
+            },{
+            '$set':{
+              'status':status,
+              'run_type':run_type,
+              'seqrun_id':seqrun_id,
+              'sampleshet_data':sampleshet_data
+          }})
+  except DuplicateKeyError as _:
+    return {'error':'Duplicate run_name or run_id found'}
+  except Exception as _:
+    return None
