@@ -1,0 +1,15 @@
+{% extends "bootstrap/base.html" %}
+
+{% block content %}
+  {{ super() }}
+  <p>
+    <form method="POST" action="">
+      {{ form.hidden_tag() }}
+      <h5>Create a new run</h5> {{ form.create_button() }}
+    </form>
+  </p>
+  <h5>List of planned runs</h5>
+  <p>
+    {{ run_list|safe }}
+  </p>
+{% endblock %}

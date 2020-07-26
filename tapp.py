@@ -8,13 +8,15 @@ from bson import json_util, ObjectId
 from app.db import get_quotes,get_users,get_projects,get_user_by_user_id
 from app.db import get_project_by_project_id,get_quote_by_quote_id,get_quotes_for_user_id,get_total_pages
 from app.db import get_projects_for_user_id,get_samples_for_project_id,get_libraries_for_project_id
-from app.db import get_active_projects_with_library
+from app.db import get_active_projects_with_library,list_planned_runs,create_or_update_run
+from app.db import fetch_run_data_for_run_id
 from flask import render_template,flash,Response,request
 import pandas as pd
 from flask_wtf import FlaskForm
 from wtforms.fields import SubmitField,StringField,SelectField,FormField,FieldList
 from wtforms import validators
 from flask_paginate import Pagination, get_page_parameter
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(12)
@@ -444,6 +446,12 @@ class Samplesheet_line_form(FlaskForm):
               validators=[])
 
 class Samplesheet_file_form(FlaskForm):
+  run_name = StringField(
+              'Run name',
+              validators=[validators.DataRequired()])
+  seqrun_id = StringField(
+              'Sequencing id',
+              validators=[])
   rows = FieldList(FormField(Samplesheet_line_form),min_entries=1)
   add_line = SubmitField(u'Add another line')
   save_data = SubmitField(u'Save data')
@@ -461,6 +469,23 @@ def edit_run(run_id):
     else:
       project_list = list(('None','None'))
     if request.method=='GET':
+      
+      run = fetch_run_data_for_run_id(run_id=run_id)
+      if run is not None and \
+         isinstance(run,dict):
+        form = Samplesheet_file_form()
+        form.run_name.data = run.get('run_name')
+        form.run_type = run.get('run_type')
+        form.status = run.get('status')
+        form.seqrun_id.data = run.get('seqrun_id')
+        form.rows.pop_entry()
+        for entry in run.get('sampleshet_data'):
+          row = Samplesheet_line_form()
+          row.lane = entry.get('lane')
+          row.project_name = entry.get('project_name')
+          row.pool_id = entry.get('pool_id')
+          form.rows.append_entry(row)
+        
       for row in form.rows:
         row.form.project_name.choices = project_list
       return render_template('edit_run.html',form=form,data=None)
@@ -474,12 +499,108 @@ def edit_run(run_id):
         for row in form.rows:
           row.form.project_name.choices = project_list
         if form.validate_on_submit():
+          samplesheet_data = list()
+          for i in form.rows.data:
+            row_data = dict()
+            for k,v in i.items():
+              if k != 'csrf_token':
+                row_data.update({k:v})
+            samplesheet_data.append(row_data)
+          res = \
+            create_or_update_run(
+              run_name=escape(form.run_name.data),
+              run_type=None,
+              status='ACTIVE',
+              seqrun_id=escape(form.seqrun_id.data),
+              sampleshet_data=samplesheet_data
+            )
           return render_template('edit_run.html',form=form,data=form.rows.data)
         else:
           return render_template('edit_run.html',form=form,data='N')
   except Exception as e:
     print(e)
 
+class Create_new_run(FlaskForm):
+  create_button = SubmitField(u'Create run')
+
+@app.route('/planned_runs',methods=('GET','POST'))
+def planned_runs():
+  try:
+    run_list = list_planned_runs()
+    form = Create_new_run(request.form)
+    if request.method=='POST':
+      return redirect(url_for('create_run'))
+    if len(run_list) > 0:
+      for entry in run_list:
+        run_name = entry.get('run_name')
+        run_id = entry.get('run_id')
+        entry.\
+          update(
+            {'run_name':'<a href="{0}">{1}</a>'.\
+              format(url_for('edit_run',run_id=run_id),run_name)})
+      run_list = pd.DataFrame(run_list)
+      run_list.drop('run_id',axis=1,inplace=True)
+      run_list = \
+        run_list.\
+        to_html(
+          index=False,
+          escape=False)
+    else:
+      run_list = 'NO RECORDS FOUND'
+    return render_template('list_run.html',form=form,run_list=run_list)
+  except Exception as e:
+    print(e)
+
+@app.route('/create_run',methods=('GET','POST'))
+def create_run():
+  try:
+    form = Samplesheet_file_form()
+    project_list = get_active_projects_with_library()
+    project_list = list(project_list)
+    if len(project_list) > 0:
+      project_list = project_list[0].get('valid_project_list')
+      project_list = [(i,i) for i in project_list]
+      project_list.insert(0,('None','None'))
+    else:
+      project_list = list(('None','None'))
+
+    if request.method=='GET':
+      for row in form.rows:
+        row.form.project_name.choices = project_list
+      return render_template('edit_run.html',form=form,data=None)
+
+    if request.method=='POST':
+      if form.add_line.data:
+        form.rows.append_entry()
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        return render_template('edit_run.html',form=form,data='A')
+      elif form.save_data.data:
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        if form.validate_on_submit():
+          samplesheet_data = list()
+          for i in form.rows.data:
+            row_data = dict()
+            for k,v in i.items():
+              if k != 'csrf_token':
+                row_data.update({k:v})
+            samplesheet_data.append(row_data)
+          res = \
+            create_or_update_run(
+              run_name=escape(form.run_name.data),
+              run_type=None,
+              status='ACTIVE',
+              seqrun_id=escape(form.seqrun_id.data),
+              sampleshet_data=samplesheet_data
+            )
+          return render_template('edit_run.html',form=form,data=samplesheet_data)
+        else:
+          return render_template('edit_run.html',form=form,data='N')
+
+      
+  except Exception as e:
+    print(e)
 
 if __name__=='__main__':
   app.run(debug=True)

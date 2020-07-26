@@ -5,6 +5,7 @@ from bson.errors import InvalidId
 from pymongo.write_concern import WriteConcern
 from pymongo.read_concern import ReadConcern
 from pymongo.errors import DuplicateKeyError, OperationFailure
+from datetime import datetime
 
 def get_db():
   '''
@@ -522,6 +523,44 @@ def get_active_projects_with_library():
   except Exception as _:
     return {}
 
+def list_planned_runs():
+  '''
+  '''
+  try:
+    pipeline = [{
+      '$project': {
+        '_id': 0, 
+        'run_name': 1, 
+        'run_id': 1, 
+        'seqrun_id': 1, 
+        'datestamp': 1
+        }
+      }, {
+      '$sort': {
+        'datestamp': -1
+        }
+      }]
+    run_list = \
+      db.planned_runs.\
+      aggregate(pipeline)
+    run_list = list(run_list)
+    return run_list
+  except (StopIteration,InvalidId) as e:
+    print(e)
+    return None
+  except Exception as _:
+    return {}
+
+def fetch_run_data_for_run_id(run_id):
+  try:
+    run = db.planned_runs.find_one({'run_id':run_id},{'_id':0})
+    return run
+  except (StopIteration,InvalidId) as e:
+    print(e)
+    return None
+  except Exception as _:
+    return {}
+
 def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sampleshet_data=None):
   try:
     rec = db.planned_runs.find_one({'run_name':run_name})
@@ -550,9 +589,10 @@ def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sample
           run_type=run_type,
           status=status,
           seqrun_id=seqrun_id,
-          sampleshet_data=sampleshet_data
+          sampleshet_data=sampleshet_data,
+          datestamp=datetime.now()
         )
-      planned_runs.insert_one(new_run)
+      db.planned_runs.insert_one(new_run)
     else:
       response = \
         planned_runs.\
@@ -563,7 +603,8 @@ def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sample
               'status':status,
               'run_type':run_type,
               'seqrun_id':seqrun_id,
-              'sampleshet_data':sampleshet_data
+              'sampleshet_data':sampleshet_data,
+              'datestamp':datetime.now()
           }})
   except DuplicateKeyError as _:
     return {'error':'Duplicate run_name or run_id found'}
