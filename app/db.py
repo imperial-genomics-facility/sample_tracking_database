@@ -561,7 +561,7 @@ def fetch_run_data_for_run_id(run_id):
   except Exception as _:
     return {}
 
-def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sampleshet_data=None):
+def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,sampleshet_data=None):
   try:
     rec = db.planned_runs.find_one({'run_name':run_name})
     if rec is None:
@@ -593,20 +593,118 @@ def create_or_update_run(run_name,run_type,status='ACTIVE',seqrun_id=None,sample
           datestamp=datetime.now()
         )
       db.planned_runs.insert_one(new_run)
+      return None
     else:
+      print(sampleshet_data)
       response = \
-        planned_runs.\
+        db.planned_runs.\
           update_one({
             'run_name':run_name
             },{
             '$set':{
               'status':status,
-              'run_type':run_type,
-              'seqrun_id':seqrun_id,
               'sampleshet_data':sampleshet_data,
               'datestamp':datetime.now()
           }})
+      print(response.raw_result)
+      return response
   except DuplicateKeyError as _:
     return {'error':'Duplicate run_name or run_id found'}
   except Exception as _:
     return None
+
+def fetch_library_for_project__id_and_pool_id(project_id,pool_id=1):
+  try:
+    pool_id = str(pool_id)
+    pipeline = [{
+      '$match': {
+        'project_id': project_id
+        }
+      }, {
+      '$project': {
+        '_id': 0, 
+        'project_id': 1
+        }
+      }, {
+      '$lookup': {
+        'from': 'library', 
+        'let': {
+          'project_id': '$project_id'
+          }, 
+        'pipeline': [{
+          '$match': {
+            '$expr': {
+              '$and': [{
+                '$eq': ['$project_id', '$$project_id']
+                }, {
+                '$eq': ['$Pool_No', pool_id]
+                }]
+              }
+            }
+          }], 
+          'as': 'libraries'
+        }
+      }, {
+      '$unwind': {
+        'path': '$libraries'
+        }
+      }, {
+      '$project': {
+        'project_id': 1, 
+        'library_id': '$libraries.libs_id', 
+        'sample_id': '$libraries.sample_id', 
+        'sample_container': '$libraries.Well_Position', 
+        'I7_id': '$libraries.Index_1_ID', 
+        'index': '$libraries.Index1_Sequence', 
+        'I5_id': '$libraries.Inedex_2_ID', 
+        'index2': '$libraries.Index2_Sequence', 
+        'pool_id': '$libraries.Pool_No'
+        }
+      }, {
+      '$lookup': {
+        'from': 'samples', 
+        'let': {
+          'sample_id': '$sample_id'
+          }, 
+        'pipeline': [{
+          '$match': {
+            '$expr': {
+              '$eq': ['$sample_id', '$$sample_id']
+              }
+            }
+          }, {
+          '$project': {
+            '_id': 0, 
+            'sample_igf_id': 1, 
+            'Sample Name': 1
+            }
+          }], 
+        'as': 'samples'
+        }
+      }, {
+      '$unwind': {
+        'path': '$samples'
+        }
+      }, {
+      '$project': {
+        'project_id': 1, 
+        'sample_igf_id': '$samples.sample_igf_id', 
+        'sample_name': '$samples.Sample Name', 
+        'library_id': 1, 
+        'sample_id': 1, 
+        'sample_container': 1, 
+        'I7_id': 1, 
+        'index': 1, 
+        'I5_id': 1, 
+        'index2': 1, 
+        'pool_id': 1
+        }
+      }]
+    records = projects.aggregate(pipeline)
+    records = list(records)
+    return records
+  except (StopIteration,InvalidId) as e:
+    print(e)
+    return None
+  except Exception as _:
+    return {}

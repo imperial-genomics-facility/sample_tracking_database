@@ -509,12 +509,10 @@ def edit_run(run_id):
           res = \
             create_or_update_run(
               run_name=escape(form.run_name.data),
-              run_type=None,
               status='ACTIVE',
-              seqrun_id=escape(form.seqrun_id.data),
               sampleshet_data=samplesheet_data
             )
-          return render_template('edit_run.html',form=form,data=form.rows.data)
+          return render_template('edit_run.html',form=form,data=samplesheet_data)
         else:
           return render_template('edit_run.html',form=form,data='N')
   except Exception as e:
