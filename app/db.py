@@ -1,3 +1,4 @@
+import io
 from flask import current_app, g
 from werkzeug.local import LocalProxy
 from pymongo import MongoClient
@@ -561,9 +562,10 @@ def fetch_run_data_for_run_id(run_id):
   except Exception as _:
     return {}
 
-def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,sampleshet_data=None):
+def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,samplesheet_data=None):
   try:
     rec = db.planned_runs.find_one({'run_name':run_name})
+
     if rec is None:
       records = \
         list(db.planned_runs.aggregate([{
@@ -589,13 +591,12 @@ def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,s
           run_type=run_type,
           status=status,
           seqrun_id=seqrun_id,
-          sampleshet_data=sampleshet_data,
+          samplesheet_data=samplesheet_data,
           datestamp=datetime.now()
         )
       db.planned_runs.insert_one(new_run)
       return None
     else:
-      print(sampleshet_data)
       response = \
         db.planned_runs.\
           update_one({
@@ -603,31 +604,31 @@ def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,s
             },{
             '$set':{
               'status':status,
-              'sampleshet_data':sampleshet_data,
+              'samplesheet_data':samplesheet_data,
               'datestamp':datetime.now()
           }})
-      print(response.raw_result)
       return response
   except DuplicateKeyError as _:
     return {'error':'Duplicate run_name or run_id found'}
   except Exception as _:
     return None
 
-def fetch_library_for_project__id_and_pool_id(project_id,pool_id=1):
+def fetch_library_for_project_id_and_pool_id(project_igf_id,pool_id=1):
   try:
     pool_id = str(pool_id)
     pipeline = [{
       '$match': {
-        'project_id': project_id
+        'project_igf_id': project_igf_id
         }
       }, {
       '$project': {
         '_id': 0, 
-        'project_id': 1
+        'project_id': 1,
+        'project_igf_id':1
         }
       }, {
       '$lookup': {
-        'from': 'library', 
+        'from': 'library',
         'let': {
           'project_id': '$project_id'
           }, 
@@ -650,19 +651,20 @@ def fetch_library_for_project__id_and_pool_id(project_id,pool_id=1):
         }
       }, {
       '$project': {
-        'project_id': 1, 
-        'library_id': '$libraries.libs_id', 
-        'sample_id': '$libraries.sample_id', 
-        'sample_container': '$libraries.Well_Position', 
-        'I7_id': '$libraries.Index_1_ID', 
-        'index': '$libraries.Index1_Sequence', 
-        'I5_id': '$libraries.Inedex_2_ID', 
-        'index2': '$libraries.Index2_Sequence', 
+        'project_id': 1,
+        'project_igf_id':1,
+        'library_id': '$libraries.libs_id',
+        'sample_id': '$libraries.sample_id',
+        'sample_well': '$libraries.Well_Position',
+        'I7_Index_ID': '$libraries.Index_1_ID',
+        'index': '$libraries.Index1_Sequence',
+        'I5_Index_ID': '$libraries.Index_2_ID',
+        'index2': '$libraries.Index2_Sequence',
         'pool_id': '$libraries.Pool_No'
         }
       }, {
       '$lookup': {
-        'from': 'samples', 
+        'from': 'samples',
         'let': {
           'sample_id': '$sample_id'
           }, 
@@ -674,11 +676,11 @@ def fetch_library_for_project__id_and_pool_id(project_id,pool_id=1):
             }
           }, {
           '$project': {
-            '_id': 0, 
-            'sample_igf_id': 1, 
+            '_id': 0,
+            'sample_igf_id': 1,
             'Sample Name': 1
             }
-          }], 
+          }],
         'as': 'samples'
         }
       }, {
@@ -687,24 +689,145 @@ def fetch_library_for_project__id_and_pool_id(project_id,pool_id=1):
         }
       }, {
       '$project': {
-        'project_id': 1, 
-        'sample_igf_id': '$samples.sample_igf_id', 
-        'sample_name': '$samples.Sample Name', 
-        'library_id': 1, 
-        'sample_id': 1, 
-        'sample_container': 1, 
-        'I7_id': 1, 
-        'index': 1, 
-        'I5_id': 1, 
-        'index2': 1, 
-        'pool_id': 1
+        'Sample_Project':'$project_igf_id',
+        'Sample_ID': '$samples.sample_igf_id',
+        'Sample_Name': '$samples.Sample Name',
+        'Sample_ID':'$sample_id',
+        'Sample_Well':'$sample_well',
+        'Sample_Plate':None,
+        'I7_Index_ID': 1,
+        'index': 1,
+        'I5_Index_ID': 1,
+        'index2': 1,
+        'Description':None 
         }
       }]
-    records = projects.aggregate(pipeline)
+    records = db.projects.aggregate(pipeline)
     records = list(records)
     return records
   except (StopIteration,InvalidId) as e:
     print(e)
     return None
+  except Exception as _:
+    return {}
+
+def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151,
+                                            r2_length = 151,assay_info = 'UNKNOWN',
+                                            chemistry_info = 'UNKNOWN',
+                                            adapter1_seq = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA',
+                                            adapter2_seq = 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'):
+  try:
+    pipeline = [{
+      '$match': {
+        'run_id': run_id
+        }
+      }, {
+      '$project': {
+        '_id': 0,
+        'run_id':1,
+        'run_type':1,
+        'assay_info':1,
+        'chemistry_info':1,
+        'r1_length':1,
+        'r2_length':1,
+        'adapter1_seq':1,
+        'adapter2_seq':1,
+        'samplesheet_data': 1
+        }
+      }, {
+      '$unwind': {
+        'path': '$samplesheet_data'
+        }
+      }, {
+      '$project': {
+        'lane': '$samplesheet_data.lane',
+        'run_id':1,
+        'run_type':1,
+        'assay_info':1,
+        'chemistry_info':1,
+        'r1_length':1,
+        'r2_length':1,
+        'adapter1_seq':1,
+        'adapter2_seq':1,
+        'project_name': '$samplesheet_data.project_name', 
+        'pool_id': '$samplesheet_data.pool_id'
+        }
+      }]
+    records = planned_runs.aggregate(pipeline)
+    records = list(records)
+    
+    if len(records) > 0:
+      run_type = records[0].get('run_type') if 'run_type' in records[0] else run_type
+      r1_length = records[0].get('r1_length') if 'r1_length' in records[0] else r1_length
+      r2_length = records[0].get('r2_length') if 'r2_length' in records[0] else r2_length
+      assay_info = records[0].get('assay_info') if 'assay_info' in records[0] else assay_info
+      chemistry_info = records[0].get('chemistry_info') if 'chemistry_info' in records[0] else chemistry_info
+      adapter1_seq = records[0].get('adapter1_seq') if 'adapter1_seq' in records[0] else adapter1_seq
+      adapter2_seq = records[0].get('adapter2_seq') if 'adapter2_seq' in records[0] else adapter2_seq
+      
+    samplesheet_data = [
+      '[Header],,,,,,,,,,',
+      'IEMFileVersion,4,,,,,,,,,',
+      'Investigator Name,IGF,,,,,,,,,',
+      'Experiment Name,{0},,,,,,,,,'.format(run_id),
+      'Date,{0},,,,,,,,,'.format(datetime.now().strftime('%d-%b-%Y')),
+      'Workflow,GenerateFASTQ,,,,,,,,,',
+      'Application,{0} FASTQ Only,,,,,,,,,'.format(run_type),
+      'Assay,{0},,,,,,,,,'.format(assay_info),
+      'Description,,,,,,,,,,',
+      'Chemistry,{0},,,,,,,,,'.format(chemistry_info),
+      ',,,,,,,,,,',
+      '[Reads],,,,,,,,,,',
+      '{0},,,,,,,,,,'.format(int(r1_length)),
+      '{0},,,,,,,,,,'.format(int(r2_length)),
+      ',,,,,,,,,,',
+      '[Settings],,,,,,,,,,',
+      'Adapter,{0},,,,,,,,,'.format(adapter1_seq),
+      'AdapterRead2,{0},,,,,,,,,'.format(adapter2_seq),
+      ',,,,,,,,,,',
+      '[Data],,,,,,,,,,'
+    ]
+    samplesheet_df = pd.DataFrame()
+    columns = [
+      'Sample_ID',
+      'Sample_Name',
+      'Sample_Plate',
+      'Sample_Well',
+      'I7_Index_ID',
+      'index',
+      'I5_Index_ID',
+      'index2',
+      'Sample_Project',
+      'Description'
+    ]
+    if run_type == 'HISEQ4000':
+      columns.insert('Lane',0)
+
+    for entry in records:
+      sr = \
+        fetch_library_for_project_id_and_pool_id(
+          project_igf_id=entry.get('project_name'),
+          pool_id=entry.get('pool_id'))
+      data = pd.DataFrame(sr)
+      lane = entry.get('lane')
+      
+      if len(data.index) > 0:
+        if lane == 'HISEQ4000':
+          data['Lane'] = int(lane)
+        if len(samplesheet_df.index) > 0:
+          samplesheet_df = pd.concat([samplesheet_df,data])
+        else:
+          samplesheet_df = data.copy()
+    samplesheet_data = '\n'.join(samplesheet_data)
+    if len(samplesheet_df.index) > 0:
+      csv_buf = io.StringIO()
+      samplesheet_df[columns].\
+        to_csv(csv_buf,index=False)
+      data = csv_buf.getvalue()
+      samplesheet_data = samplesheet_data + '\n' + data
+    else:
+      columns = ','.join(columns)
+      samplesheet_data = samplesheet_data + '\n' + columns
+    return samplesheet_data
   except Exception as _:
     return {}
