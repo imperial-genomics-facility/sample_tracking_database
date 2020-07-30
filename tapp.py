@@ -1,5 +1,5 @@
 import os
-from flask import Flask,escape,redirect,url_for
+from flask import Flask,escape,redirect,url_for,Response
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf.csrf import CSRFProtect
@@ -456,6 +456,7 @@ class Samplesheet_file_form(FlaskForm):
   add_line = SubmitField(u'Add another line')
   save_data = SubmitField(u'Save data')
 
+
 @app.route('/edit_run/<run_id>',methods=('GET','POST'))
 def edit_run(run_id):
   try:
@@ -479,7 +480,7 @@ def edit_run(run_id):
         form.status = run.get('status')
         form.seqrun_id.data = run.get('seqrun_id')
         form.rows.pop_entry()
-        for entry in run.get('sampleshet_data'):
+        for entry in run.get('samplesheet_data'):
           row = Samplesheet_line_form()
           row.lane = entry.get('lane')
           row.project_name = entry.get('project_name')
@@ -510,7 +511,7 @@ def edit_run(run_id):
             create_or_update_run(
               run_name=escape(form.run_name.data),
               status='ACTIVE',
-              sampleshet_data=samplesheet_data
+              samplesheet_data=samplesheet_data
             )
           return render_template('edit_run.html',form=form,data=samplesheet_data)
         else:
@@ -590,7 +591,7 @@ def create_run():
               run_type=None,
               status='ACTIVE',
               seqrun_id=escape(form.seqrun_id.data),
-              sampleshet_data=samplesheet_data
+              samplesheet_data=samplesheet_data
             )
           return render_template('edit_run.html',form=form,data=samplesheet_data)
         else:
