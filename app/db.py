@@ -532,9 +532,11 @@ def list_planned_runs():
     pipeline = [{
       '$project': {
         '_id': 0, 
-        'run_name': 1, 
-        'run_id': 1, 
-        'seqrun_id': 1, 
+        'run_name': 1,
+        'run_id': 1,
+        'seqrun_id': 1,
+        'run_type':1,
+        'status':1,
         'datestamp': 1
         }
       }, {
@@ -820,8 +822,8 @@ def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151
       'Sample_Project',
       'Description'
     ]
-    if run_type == 'HISEQ4000':
-      columns.insert('Lane',0)
+    if run_type in ('HISEQ4000','NOVASEQ'):
+      columns.insert(0,'Lane')
 
     for entry in records:
       sr = \
@@ -832,7 +834,7 @@ def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151
       lane = entry.get('lane')
       
       if len(data.index) > 0:
-        if lane == 'HISEQ4000':
+        if run_type in ('HISEQ4000','NOVASEQ'):
           data['Lane'] = int(lane)
         if len(samplesheet_df.index) > 0:
           samplesheet_df = pd.concat([samplesheet_df,data])

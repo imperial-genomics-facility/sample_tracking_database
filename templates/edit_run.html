@@ -11,13 +11,13 @@
     </p>
     <h5>Run configuration</h5>
     <p>
+      <div>{{ form.seqrun_id.label }} {{ form.seqrun_id }}</div>
+    </p>
+    <p>
       <div>{{ form.run_type.label }} {{ form.run_type }}</div>
     </p>
     <p>
       <div>{{ form.status.label }} {{ form.status }}</div>
-    </p>
-    <p>
-      <div>{{ form.seqrun_id.label }} {{ form.seqrun_id }}</div>
     </p>
     <h5>Read cycle info</h5>
     <p>
@@ -45,11 +45,12 @@
       </p>
     {% endfor %}
     <p>
-    {{ form.add_line() }}
+    {{ form.add_line() }}  {{ form.remove_line() }}
     </p>
     {{ form.save_data() }}
     <p>
     {% if show_get_csv %}
+    <h5>Download</h5>
       {{ form.get_csv() }}
     {% endif %}
     </p>

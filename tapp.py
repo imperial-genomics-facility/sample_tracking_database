@@ -457,7 +457,7 @@ class Samplesheet_file_form(FlaskForm):
   run_type = \
     SelectField(
       'Run type',
-      choices=[(None,None),('MiSEQ','MiSEQ'),('HISEQ4000','HISEQ4000'),('NOVASEQ','NOVASEQ')],
+      choices=[(None,None),('MISEQ','MISEQ'),('NEXTSEQ','NEXTSEQ'),('HISEQ4000','HISEQ4000'),('NOVASEQ','NOVASEQ')],
       validators=[validators.DataRequired()])
   status = \
     SelectField(
@@ -500,6 +500,7 @@ class Samplesheet_file_form(FlaskForm):
         Samplesheet_line_form),
         min_entries=1)
   add_line = SubmitField(u'Add another line')
+  remove_line = SubmitField(u'Remove one line')
   save_data = SubmitField(u'Save data')
   get_csv = SubmitField(u'Get Samplesheet')
 
@@ -539,7 +540,7 @@ def edit_run(run_id):
           row.project_name = entry.get('project_name')
           row.pool_id = entry.get('pool_id')
           form.rows.append_entry(row)
-        
+
       for row in form.rows:
         row.form.project_name.choices = project_list
       return render_template('edit_run.html',form=form,show_get_csv=True,data=None)
@@ -549,6 +550,12 @@ def edit_run(run_id):
         for row in form.rows:
           row.form.project_name.choices = project_list
         return render_template('edit_run.html',form=form,show_get_csv=True,data='A')
+      elif form.remove_line.data:
+        if len(form.rows) > 0:
+          form.rows.pop_entry()
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        return render_template('edit_run.html',form=form,show_get_csv=True,data='R')
       elif form.get_csv.data:
         samplesheet_data = \
           get_samplesheet_data_for_planned_run_id(
@@ -575,6 +582,7 @@ def edit_run(run_id):
               run_type=form.run_type.data,
               status=form.status.data,
               samplesheet_data=samplesheet_data,
+              seqrun_id=escape(form.seqrun_id.data),
               chemistry_info=escape(form.chemistry_info.data),
               r1_length=escape(form.r1_length.data),
               r2_length=escape(form.r2_length.data),
@@ -636,13 +644,18 @@ def create_run():
       for row in form.rows:
         row.form.project_name.choices = project_list
       return render_template('edit_run.html',form=form,show_get_csv=False,data=None)
-
     if request.method=='POST':
       if form.add_line.data:
         form.rows.append_entry()
         for row in form.rows:
           row.form.project_name.choices = project_list
         return render_template('edit_run.html',form=form,data='A')
+      elif form.remove_line.data:
+        if len(form.rows) > 0:
+          form.rows.pop_entry()
+        for row in form.rows:
+          row.form.project_name.choices = project_list
+        return render_template('edit_run.html',form=form,show_get_csv=True,data='R')
       elif form.save_data.data:
         for row in form.rows:
           row.form.project_name.choices = project_list
