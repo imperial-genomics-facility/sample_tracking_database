@@ -2,25 +2,57 @@
 
 {% block content %}
   {{ super() }}
+  <h1>Create or edit planned run</h1>
   <form method="POST" action="">
     {{ form.hidden_tag() }}
+    <h5>Run information</h5>
     <p>
-    {{ form.run_name.label }} {{ form.run_name }}
+      <div>{{ form.run_name.label }} {{ form.run_name }}</div>
+    </p>
+    <h5>Run configuration</h5>
+    <p>
+      <div>{{ form.run_type.label }} {{ form.run_type }}</div>
     </p>
     <p>
-    {{ form.seqrun_id.label }} {{ form.seqrun_id }}
+      <div>{{ form.status.label }} {{ form.status }}</div>
     </p>
+    <p>
+      <div>{{ form.seqrun_id.label }} {{ form.seqrun_id }}</div>
+    </p>
+    <h5>Read cycle info</h5>
+    <p>
+      <div>{{ form.r1_length.label }} {{ form.r1_length }}</div>
+      <div>{{ form.r2_length.label }} {{ form.r2_length }}</div>
+    </p>
+    <h5>Library info</h5>
+    <p>
+      <div>{{ form.assay_info.label }} {{ form.assay_info }}</div>
+      <div>{{ form.chemistry_info.label }} {{ form.chemistry_info }}</div>
+    </p>
+    <h5>Adapter info</h5>
+    <p>
+      <div>{{ form.adapter1_seq.label }} {{ form.adapter1_seq }}</div>
+    </p>
+    <p>
+      <div>{{ form.adapter2_seq.label }} {{ form.adapter2_seq }}</div>
+    </p>
+    <h5>SampleSheet Data</h5>
     {% for row in form.rows %}
       <p>
-      {{ row.form.lane.label }}  {{ row.form.lane }}
-      {{ row.form.project_name.label }}  {{ row.form.project_name }}
-      {{ row.form.pool_id.label }}  {{ row.form.pool_id }}
+      {{ row.form.lane.label }} {{ row.form.lane }}
+      {{ row.form.project_name.label }} {{ row.form.project_name }}
+      {{ row.form.pool_id.label }} {{ row.form.pool_id }}
       </p>
     {% endfor %}
     <p>
     {{ form.add_line() }}
     </p>
     {{ form.save_data() }}
+    <p>
+    {% if show_get_csv %}
+      {{ form.get_csv() }}
+    {% endif %}
+    </p>
     </form>
     <h4>Data</h4>
     {{ data }}

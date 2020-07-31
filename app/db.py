@@ -1,4 +1,5 @@
 import io
+import pandas as pd
 from flask import current_app, g
 from werkzeug.local import LocalProxy
 from pymongo import MongoClient
@@ -562,7 +563,9 @@ def fetch_run_data_for_run_id(run_id):
   except Exception as _:
     return {}
 
-def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,samplesheet_data=None):
+def create_or_update_run(run_name,run_type=None,status='ACTIVE',chemistry_info=None,
+                         r1_length=None,r2_length=None,assay_info=None,adapter2_seq=None,
+                         seqrun_id=None,samplesheet_data=None,adapter1_seq=None):
   try:
     rec = db.planned_runs.find_one({'run_name':run_name})
 
@@ -590,6 +593,12 @@ def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,s
           run_name=run_name,
           run_type=run_type,
           status=status,
+          r1_length=r1_length,
+          r2_length=r2_length,
+          assay_info=assay_info,
+          chemistry_info=chemistry_info,
+          adapter1_seq=adapter1_seq,
+          adapter2_seq=adapter2_seq,
           seqrun_id=seqrun_id,
           samplesheet_data=samplesheet_data,
           datestamp=datetime.now()
@@ -604,6 +613,14 @@ def create_or_update_run(run_name,run_type=None,status='ACTIVE',seqrun_id=None,s
             },{
             '$set':{
               'status':status,
+              'run_type':run_type,
+              'r1_length':r1_length,
+              'r2_length':r2_length,
+              'assay_info':assay_info,
+              'chemistry_info':chemistry_info,
+              'adapter1_seq':adapter1_seq,
+              'adapter2_seq':adapter2_seq,
+              'seqrun_id':seqrun_id,
               'samplesheet_data':samplesheet_data,
               'datestamp':datetime.now()
           }})
@@ -713,7 +730,7 @@ def fetch_library_for_project_id_and_pool_id(project_igf_id,pool_id=1):
 
 def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151,
                                             r2_length = 151,assay_info = 'UNKNOWN',
-                                            chemistry_info = 'UNKNOWN',
+                                            chemistry_info = 'UNKNOWN',status='ACTIVE',
                                             adapter1_seq = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA',
                                             adapter2_seq = 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'):
   try:
@@ -727,6 +744,7 @@ def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151
         'run_id':1,
         'run_type':1,
         'assay_info':1,
+        'status':1,
         'chemistry_info':1,
         'r1_length':1,
         'r2_length':1,
@@ -744,6 +762,7 @@ def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151
         'run_id':1,
         'run_type':1,
         'assay_info':1,
+        'status':1,
         'chemistry_info':1,
         'r1_length':1,
         'r2_length':1,
@@ -753,11 +772,12 @@ def get_samplesheet_data_for_planned_run_id(run_id,run_type=None,r1_length = 151
         'pool_id': '$samplesheet_data.pool_id'
         }
       }]
-    records = planned_runs.aggregate(pipeline)
+    records = db.planned_runs.aggregate(pipeline)
     records = list(records)
     
     if len(records) > 0:
       run_type = records[0].get('run_type') if 'run_type' in records[0] else run_type
+      status = records[0].get('status') if 'status' in records[0] else status
       r1_length = records[0].get('r1_length') if 'r1_length' in records[0] else r1_length
       r2_length = records[0].get('r2_length') if 'r2_length' in records[0] else r2_length
       assay_info = records[0].get('assay_info') if 'assay_info' in records[0] else assay_info

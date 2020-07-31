@@ -9,11 +9,11 @@ from app.db import get_quotes,get_users,get_projects,get_user_by_user_id
 from app.db import get_project_by_project_id,get_quote_by_quote_id,get_quotes_for_user_id,get_total_pages
 from app.db import get_projects_for_user_id,get_samples_for_project_id,get_libraries_for_project_id
 from app.db import get_active_projects_with_library,list_planned_runs,create_or_update_run
-from app.db import fetch_run_data_for_run_id
+from app.db import fetch_run_data_for_run_id,get_samplesheet_data_for_planned_run_id
 from flask import render_template,flash,Response,request
 import pandas as pd
 from flask_wtf import FlaskForm
-from wtforms.fields import SubmitField,StringField,SelectField,FormField,FieldList
+from wtforms.fields import SubmitField,StringField,SelectField,FormField,FieldList,IntegerField
 from wtforms import validators
 from flask_paginate import Pagination, get_page_parameter
 from datetime import datetime
@@ -446,15 +446,62 @@ class Samplesheet_line_form(FlaskForm):
               validators=[])
 
 class Samplesheet_file_form(FlaskForm):
-  run_name = StringField(
-              'Run name',
-              validators=[validators.DataRequired()])
-  seqrun_id = StringField(
-              'Sequencing id',
-              validators=[])
-  rows = FieldList(FormField(Samplesheet_line_form),min_entries=1)
+  run_name = \
+    StringField(
+      'Run name',
+      validators=[validators.DataRequired()])
+  seqrun_id = \
+    StringField(
+      'Sequencing id',
+      validators=[validators.DataRequired()])
+  run_type = \
+    SelectField(
+      'Run type',
+      choices=[(None,None),('MiSEQ','MiSEQ'),('HISEQ4000','HISEQ4000'),('NOVASEQ','NOVASEQ')],
+      validators=[validators.DataRequired()])
+  status = \
+    SelectField(
+      'Status',
+      choices=[(None,None),('ACTIVE','ACTIVE'),('FAILED','FAILED'),('FINISHED','FINISHED')],
+      validators=[validators.DataRequired()])
+  r1_length = \
+    IntegerField(
+      label='R1 cycle',
+      default=151,
+      validators=[validators.NumberRange(min=0)])
+  r2_length = \
+    IntegerField(
+      label='R2 cycle',
+      default=151,
+      validators=[validators.NumberRange(min=0)])
+  assay_info = \
+    StringField(
+      'Assay type',
+      default='UNKNOWN',
+      validators=[validators.DataRequired()])
+  chemistry_info = \
+    StringField(
+      'Chemistry',
+      default='UNKNOWN',
+      validators=[validators.DataRequired()])
+  adapter1_seq = \
+    StringField(
+      'Adepter 1',
+      default='AGATCGGAAGAGCACACGTCTGAACTCCAGTCA',
+      validators=[validators.DataRequired()])
+  adapter2_seq = \
+    StringField(
+      'Adepter 2',
+      default='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT',
+      validators=[validators.DataRequired()])
+  rows = \
+    FieldList(
+      FormField(
+        Samplesheet_line_form),
+        min_entries=1)
   add_line = SubmitField(u'Add another line')
   save_data = SubmitField(u'Save data')
+  get_csv = SubmitField(u'Get Samplesheet')
 
 
 @app.route('/edit_run/<run_id>',methods=('GET','POST'))
@@ -476,9 +523,15 @@ def edit_run(run_id):
          isinstance(run,dict):
         form = Samplesheet_file_form()
         form.run_name.data = run.get('run_name')
-        form.run_type = run.get('run_type')
-        form.status = run.get('status')
+        form.run_type.data = run.get('run_type')
+        form.status.data = run.get('status')
         form.seqrun_id.data = run.get('seqrun_id')
+        form.r1_length.data = run.get('r1_length')
+        form.r2_length.data = run.get('r2_length')
+        form.assay_info.data = run.get('assay_info')
+        form.chemistry_info.data = run.get('chemistry_info')
+        form.adapter1_seq.data = run.get('adapter1_seq')
+        form.adapter2_seq.data = run.get('adapter2_seq')
         form.rows.pop_entry()
         for entry in run.get('samplesheet_data'):
           row = Samplesheet_line_form()
@@ -489,13 +542,22 @@ def edit_run(run_id):
         
       for row in form.rows:
         row.form.project_name.choices = project_list
-      return render_template('edit_run.html',form=form,data=None)
+      return render_template('edit_run.html',form=form,show_get_csv=True,data=None)
     if request.method=='POST':
       if form.add_line.data:
         form.rows.append_entry()
         for row in form.rows:
           row.form.project_name.choices = project_list
-        return render_template('edit_run.html',form=form,data='A')
+        return render_template('edit_run.html',form=form,show_get_csv=True,data='A')
+      elif form.get_csv.data:
+        samplesheet_data = \
+          get_samplesheet_data_for_planned_run_id(
+            run_id=run_id)
+        return Response(
+                 samplesheet_data,
+                 mimetype="text/csv",
+                 headers={"Content-disposition":
+                          "attachment; filename=SampleSheet.csv"})
       elif form.save_data.data:
         for row in form.rows:
           row.form.project_name.choices = project_list
@@ -509,13 +571,20 @@ def edit_run(run_id):
             samplesheet_data.append(row_data)
           res = \
             create_or_update_run(
-              run_name=escape(form.run_name.data),
-              status='ACTIVE',
-              samplesheet_data=samplesheet_data
+              run_name=form.run_name.data,
+              run_type=form.run_type.data,
+              status=form.status.data,
+              samplesheet_data=samplesheet_data,
+              chemistry_info=escape(form.chemistry_info.data),
+              r1_length=escape(form.r1_length.data),
+              r2_length=escape(form.r2_length.data),
+              assay_info=escape(form.assay_info.data),
+              adapter1_seq=escape(form.adapter1_seq.data),
+              adapter2_seq=escape(form.adapter2_seq.data)
             )
-          return render_template('edit_run.html',form=form,data=samplesheet_data)
+          return render_template('edit_run.html',form=form,show_get_csv=True,data=samplesheet_data)
         else:
-          return render_template('edit_run.html',form=form,data='N')
+          return render_template('edit_run.html',form=form,show_get_csv=True,data='N')
   except Exception as e:
     print(e)
 
@@ -566,7 +635,7 @@ def create_run():
     if request.method=='GET':
       for row in form.rows:
         row.form.project_name.choices = project_list
-      return render_template('edit_run.html',form=form,data=None)
+      return render_template('edit_run.html',form=form,show_get_csv=False,data=None)
 
     if request.method=='POST':
       if form.add_line.data:
@@ -585,17 +654,24 @@ def create_run():
               if k != 'csrf_token':
                 row_data.update({k:v})
             samplesheet_data.append(row_data)
+          print(samplesheet_data)
           res = \
             create_or_update_run(
               run_name=escape(form.run_name.data),
-              run_type=None,
-              status='ACTIVE',
+              run_type=form.run_type.data,
+              status=form.status.data,
+              chemistry_info=escape(form.chemistry_info.data),
+              r1_length=escape(form.r1_length.data),
+              r2_length=escape(form.r2_length.data),
+              assay_info=escape(form.assay_info.data),
+              adapter1_seq=escape(form.adapter1_seq.data),
+              adapter2_seq=escape(form.adapter2_seq.data),
               seqrun_id=escape(form.seqrun_id.data),
               samplesheet_data=samplesheet_data
             )
-          return render_template('edit_run.html',form=form,data=samplesheet_data)
+          return render_template('edit_run.html',form=form,show_get_csv=False,data=samplesheet_data)
         else:
-          return render_template('edit_run.html',form=form,data='N')
+          return render_template('edit_run.html',form=form,show_get_csv=False,data=form.errors)
 
       
   except Exception as e:
