@@ -525,11 +525,43 @@ def get_active_projects_with_library():
   except Exception as _:
     return {}
 
-def list_planned_runs():
+def list_planned_runs(run_pattern='',page=0,runs_per_page=20):
   '''
   '''
   try:
+    skip_count = page * runs_per_page
     pipeline = [{
+      '$match': {
+        '$or': [{
+          'run_name': {
+            '$regex': run_pattern, 
+            '$options': 'i'
+            }
+          }, {
+          'seqrun_id': {
+            '$regex': run_pattern, 
+            '$options': 'i'
+            }
+          },{
+          'samplesheet_data':{
+            '$elemMatch':{
+              'project_name':{
+                '$regex':run_pattern,
+                '$options':'i'
+                }
+              }
+            }
+          }]
+        }
+      }, {
+      '$skip': skip_count
+      }, {
+      '$limit': runs_per_page
+      },{
+      '$sort': {
+        'datestamp': -1
+        }
+      },{
       '$project': {
         '_id': 0, 
         'run_name': 1,
@@ -537,18 +569,43 @@ def list_planned_runs():
         'seqrun_id': 1,
         'run_type':1,
         'status':1,
-        'datestamp': 1
-        }
-      }, {
-      '$sort': {
-        'datestamp': -1
+        'datestamp': 1,
+        'projects':'$samplesheet_data.project_name'
         }
       }]
     run_list = \
       db.planned_runs.\
       aggregate(pipeline)
     run_list = list(run_list)
-    return run_list
+    pipeline= [{
+      '$match': {
+        '$or': [{
+          'run_name': {
+            '$regex': run_pattern, 
+            '$options': 'i'
+            }
+          }, {
+          'seqrun_id': {
+            '$regex': run_pattern, 
+            '$options': 'i'
+            }
+          },{
+          'samplesheet_data':{
+            '$elemMatch':{
+              'project_name':{
+                '$regex':run_pattern,
+                '$options':'i'
+                }
+              }
+            }
+          }]
+        }
+      }, {
+      '$count':'total_rows'}]
+    total_rows = \
+      db.planned_runs.\
+      aggregate(pipeline).next().get('total_rows')
+    return run_list,total_rows
   except (StopIteration,InvalidId) as e:
     print(e)
     return None

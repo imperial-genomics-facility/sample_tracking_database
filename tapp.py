@@ -501,7 +501,7 @@ class Samplesheet_file_form(FlaskForm):
         min_entries=1)
   add_line = SubmitField(u'Add another line')
   remove_line = SubmitField(u'Remove one line')
-  save_data = SubmitField(u'Save data')
+  save_data = SubmitField(u'Save and close')
   get_csv = SubmitField(u'Get Samplesheet')
 
 
@@ -590,7 +590,9 @@ def edit_run(run_id):
               adapter1_seq=escape(form.adapter1_seq.data),
               adapter2_seq=escape(form.adapter2_seq.data)
             )
-          return render_template('edit_run.html',form=form,show_get_csv=True,data=samplesheet_data)
+          flash('Success')
+          return redirect(url_for('planned_runs'))
+          #return render_template('edit_run.html',form=form,show_get_csv=True,data=samplesheet_data)
         else:
           return render_template('edit_run.html',form=form,show_get_csv=True,data='N')
   except Exception as e:
@@ -599,12 +601,35 @@ def edit_run(run_id):
 class Create_new_run(FlaskForm):
   create_button = SubmitField(u'Create run')
 
+class Search_planned_run(FlaskForm):
+  input_field = StringField('Keyword',validators=[validators.length(min=1,max=20)])
+  search_run = SubmitField(u'Search run')
+
 @app.route('/planned_runs',methods=('GET','POST'))
 def planned_runs():
   try:
-    run_list = list_planned_runs()
     form = Create_new_run(request.form)
-    if request.method=='POST':
+    form2 = Search_planned_run(request.form)
+    runs_per_page = 20
+    page = 1
+    run_pattern = ''
+    page = request.args.get(get_page_parameter(), type=int, default=page)
+    if form2.validate_on_submit():
+      run_pattern = form2.input_field.data
+      run_pattern = run_pattern.strip()
+      run_pattern = escape(run_pattern)
+    else:
+      if request.method=='POST' and \
+         form2.search_run.data:
+        flash('Bad request')
+        redirect(url_for('planned_runs'))
+    run_list,total_rows = \
+      list_planned_runs(
+        run_pattern=run_pattern,
+        page=page-1,
+        runs_per_page=runs_per_page)
+    if request.method=='POST' and \
+       form.create_button.data:
       return redirect(url_for('create_run'))
     if len(run_list) > 0:
       for entry in run_list:
@@ -612,10 +637,14 @@ def planned_runs():
         run_id = entry.get('run_id')
         entry.\
           update(
-            {'run_name':'<a href="{0}">{1}</a>'.\
-              format(url_for('edit_run',run_id=run_id),run_name)})
+            {'run_id':'<a href="{0}">{1}</a>'.\
+              format(url_for('edit_run',run_id=run_id),run_id)})
+        projects = entry.get('projects')
+        if len(projects) > 0:
+          projects = ['<div>{0}</div>'.format(i) for i in set(projects)]
+          projects = ''.join(projects)
+          entry.update({'projects':projects})
       run_list = pd.DataFrame(run_list)
-      run_list.drop('run_id',axis=1,inplace=True)
       run_list = \
         run_list.\
         to_html(
@@ -623,7 +652,16 @@ def planned_runs():
           escape=False)
     else:
       run_list = 'NO RECORDS FOUND'
-    return render_template('list_run.html',form=form,run_list=run_list)
+
+    pagination = \
+      Pagination(
+        page=page,
+        total=total_rows,
+        search=False,
+        per_page=runs_per_page,
+        record_name='planned runs',
+        css_framework='bootstrap4')
+    return render_template('list_run.html',form=form,form2=form2,run_list=run_list,pagination=pagination)
   except Exception as e:
     print(e)
 
@@ -682,7 +720,9 @@ def create_run():
               seqrun_id=escape(form.seqrun_id.data),
               samplesheet_data=samplesheet_data
             )
-          return render_template('edit_run.html',form=form,show_get_csv=False,data=samplesheet_data)
+          flash('Success')
+          return redirect(url_for('planned_runs'))
+          #return render_template('edit_run.html',form=form,show_get_csv=False,data=samplesheet_data)
         else:
           return render_template('edit_run.html',form=form,show_get_csv=False,data=form.errors)
 
