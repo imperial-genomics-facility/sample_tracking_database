@@ -44,7 +44,7 @@ def user_home():
       user_list['user_id'] = \
         user_list['user_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
-                        format(url_for('user_info',user_id=x),x))
+                        format(url_for('users.user_info',user_id=x),x))
     user_list = \
       user_list.\
       to_html(
@@ -55,11 +55,12 @@ def user_home():
                            form=form,
                            user_list=user_list,
                            pagination=pagination)
-  except Exception as _:
+  except Exception as e:
     flash('Failed request')
-    return redirect(url_for('user_home'))
+    print(e)
+    return None
 
-@users.route('/<user_id>',methods=['GET'])
+@users.route('/user/<user_id>',methods=['GET'])
 def user_info(user_id):
   try:
     user_record = get_user_by_user_id(user_id=user_id)
@@ -79,7 +80,7 @@ def user_info(user_id):
       quotes_list['quote_id'] = \
         quotes_list['quote_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
-                        format(url_for('quote_info',quote_id=x),x))
+                        format(url_for('quotes.quote_info',quote_id=x),x))
       quotes_list = \
         quotes_list.\
         to_html(
@@ -99,7 +100,7 @@ def user_info(user_id):
       project_list['project_id'] = \
         project_list['project_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
-            format(url_for('project_info',project_id=x),x))
+            format(url_for('projects.project_info',project_id=x),x))
       project_list = \
         project_list.\
         to_html(
@@ -109,10 +110,9 @@ def user_info(user_id):
     else:
       project_list = 'NO RECORD FOUND'
     return render_template(
-      'user/user_info.html',
+      'user_info.html',
       user_list=user_record,
       quotes_list=quotes_list,
       projects_list=project_list)
-  except Exception as _:
-    flash('Failed request')
-    return redirect(url_for('user_home'))
+  except Exception as e:
+    print(e)
