@@ -1,13 +1,13 @@
 import os,logging
 from flask import render_template,flash,Response,request,redirect,url_for,escape
-from . import quote
+from . import quotes
 import pandas as pd
 from app.db import get_quotes,get_quote_by_quote_id,get_total_pages
 from .forms import Quotes_search_form
 from app.db import get_quotes
 from flask_paginate import Pagination, get_page_parameter
 
-@quote.route('/',methods=('GET', 'POST'))
+@quotes.route('/',methods=('GET', 'POST'))
 def quote_home():
   try:
     quotes_per_page = 20
@@ -22,7 +22,7 @@ def quote_home():
     else:
       if request.method=='POST':
         flash('Bad request')
-        redirect(url_for('quote_home'))
+        redirect(url_for('quotes.quote_home'))
     quotes_list = \
       get_quotes(
         search_pattern=legacy_quote_id,
@@ -39,7 +39,7 @@ def quote_home():
       quotes_list['quote_id'] = \
         quotes_list['quote_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
-                        format(url_for('quote_info',quote_id=x),x))
+                        format(url_for('quotes.quote_info',quote_id=x),x))
       quotes_list = \
         quotes_list.\
         to_html(
@@ -49,7 +49,6 @@ def quote_home():
     else:
       quotes_list = 'NO RECORDS FOUND'
       total_rows = 0
-
     pagination = \
       Pagination(
         page=page,
@@ -63,9 +62,9 @@ def quote_home():
                            pagination=pagination)
   except Exception as _:
     flash('Failed request')
-    return redirect(url_for('quote_home'))
+    return redirect(url_for('quotes.quote_home'))
 
-@quote.route('/<quote_id>',methods=('GET'))
+@quotes.route('/quote/<quote_id>',methods=('GET',))
 def quote_info(quote_id):
   try:
     quote_record = get_quote_by_quote_id(quote_id=quote_id)
@@ -78,7 +77,7 @@ def quote_info(quote_id):
           i_items.\
             append(
               '<a href="{0}">{1}</a>'.\
-              format(url_for('user_info',user_id=v),v))
+              format(url_for('users.user_info',user_id=v),v))
         else:
           i_items.append('<a>{0}</a>'.format(v))
       user_html.append('<li>{0}</li>'.format(': '.join(i_items)))
@@ -99,4 +98,4 @@ def quote_info(quote_id):
              quotes_list=quote_record)
   except Exception as _:
     flash('Failed request')
-    return redirect(url_for('quote_home'))
+    return None

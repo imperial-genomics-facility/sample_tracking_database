@@ -60,7 +60,7 @@ def user_home():
     print(e)
     return None
 
-@users.route('/user/<user_id>',methods=['GET'])
+@users.route('/user/<user_id>',methods=('GET',))
 def user_info(user_id):
   try:
     user_record = get_user_by_user_id(user_id=user_id)
@@ -110,7 +110,7 @@ def user_info(user_id):
     else:
       project_list = 'NO RECORD FOUND'
     return render_template(
-      'user_info.html',
+      'user/user_info.html',
       user_list=user_record,
       quotes_list=quotes_list,
       projects_list=project_list)

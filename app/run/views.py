@@ -26,7 +26,7 @@ def planned_runs():
       if request.method=='POST' and \
          form2.search_run.data:
         flash('Bad request')
-        redirect(url_for('planned_runs'))
+        redirect(url_for('runs.planned_runs'))
     run_list,total_rows = \
       list_planned_runs(
         run_pattern=run_pattern,
@@ -34,7 +34,7 @@ def planned_runs():
         runs_per_page=runs_per_page)
     if request.method=='POST' and \
        form.create_button.data:
-      return redirect(url_for('create_run'))
+      return redirect(url_for('runs.create_run'))
     if len(run_list) > 0:
       for entry in run_list:
         run_name = entry.get('run_name')
@@ -42,7 +42,7 @@ def planned_runs():
         entry.\
           update(
             {'run_id':'<a href="{0}">{1}</a>'.\
-              format(url_for('edit_run',run_id=run_id),run_id)})
+              format(url_for('runs.edit_run',run_id=run_id),run_id)})
         projects = entry.get('projects')
         if len(projects) > 0:
           projects = ['<div>{0}</div>'.format(i) for i in set(projects)]
@@ -70,9 +70,11 @@ def planned_runs():
              form2=form2,
              run_list=run_list,
              pagination=pagination)
-  except Exception as _:
+  except Exception as e:
     flash('Failed request')
-    return redirect(url_for('planned_runs'))
+    print(e)
+    return None
+
 
 @runs.route('/create_run',methods=('GET','POST'))
 def create_run():
@@ -99,7 +101,10 @@ def create_run():
         form.rows.append_entry()
         for row in form.rows:
           row.form.project_name.choices = project_list
-        return render_template('edit_run.html',form=form)
+        return render_template(
+                 'run/edit_run.html',
+                 form=form,
+                 show_get_csv=True)
       elif form.remove_line.data:
         if len(form.rows) > 0:
           form.rows.pop_entry()
@@ -120,6 +125,7 @@ def create_run():
               if k != 'csrf_token':
                 row_data.update({k:v})
             samplesheet_data.append(row_data)
+          print(samplesheet_data)
           res = \
             create_or_update_run(
               run_name=escape(form.run_name.data),
@@ -135,15 +141,17 @@ def create_run():
               samplesheet_data=samplesheet_data
             )
           flash('Success')
-          return redirect(url_for('planned_runs'))
+          return redirect(url_for('runs.planned_runs'))
         else:
+          print(form.errors)
           return render_template(
                    'run/edit_run.html',
                    form=form,
                    show_get_csv=False)
-  except Exception as _:
+  except Exception as e:
     flash('Failed request')
-    return redirect(url_for('planned_runs'))
+    print(e)
+    return redirect(url_for('runs.planned_runs'))
 
 @runs.route('/edit_run/<run_id>',methods=('GET','POST'))
 def edit_run(run_id):
@@ -240,7 +248,7 @@ def edit_run(run_id):
               adapter2_seq=escape(form.adapter2_seq.data)
             )
           flash('Success')
-          return redirect(url_for('planned_runs'))
+          return redirect(url_for('runs.planned_runs'))
         else:
           return render_template(
                    'run/edit_run.html',
@@ -248,4 +256,4 @@ def edit_run(run_id):
                    show_get_csv=True)
   except Exception as _:
     flash('Failed request')
-    return redirect(url_for('planned_runs'))
+    return redirect(url_for('runs.planned_runs'))

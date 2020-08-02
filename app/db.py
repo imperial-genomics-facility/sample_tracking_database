@@ -603,8 +603,11 @@ def list_planned_runs(run_pattern='',page=0,runs_per_page=20):
       }, {
       '$count':'total_rows'}]
     total_rows = \
-      db.planned_runs.\
-      aggregate(pipeline).next().get('total_rows')
+      list(db.planned_runs.aggregate(pipeline))
+    if len(total_rows) > 0:
+      total_rows = total_rows[0].get('total_rows')
+    else:
+      total_rows = 0
     return run_list,total_rows
   except (StopIteration,InvalidId) as e:
     print(e)

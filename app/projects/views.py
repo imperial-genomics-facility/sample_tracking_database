@@ -22,7 +22,7 @@ def project_home():
     else:
       if request.method=='POST':
         flash('Bad request')
-        redirect(url_for('project_home'))
+        redirect(url_for('projects.project_home'))
     project_list = \
       get_projects(
         search_pattern=project_igf_id,
@@ -48,7 +48,7 @@ def project_home():
       project_list['project_id'] = \
         project_list['project_id'].\
           map(lambda x: '<a href="{0}">{1}</a>'.\
-            format(url_for('project_info',project_id=x),x))
+            format(url_for('projects.project_info',project_id=x),x))
       project_list = \
         project_list.\
         to_html(
@@ -63,9 +63,10 @@ def project_home():
                            pagination=pagination)
   except Exception as e:
     flash('Failed request')
-    return redirect(url_for('project_home'))
+    print(e)
+    return None
 
-@projects.route('/<project_id>',methods=('GET'))
+@projects.route('/project/<project_id>',methods=('GET',))
 def project_info(project_id):
   try:
     project_record = \
@@ -80,7 +81,7 @@ def project_info(project_id):
           i_items.\
             append(
               '<a href="{0}">{1}</a>'.\
-                format(url_for('user_info',user_id=v),v))
+                format(url_for('users.user_info',user_id=v),v))
         else:
           i_items.append('<a>{0}</a>'.format(v))
       user_html.append('<li>{0}</li>'.format(': '.join(i_items)))
@@ -90,7 +91,7 @@ def project_info(project_id):
     quotes_html = ['<ul>']
     quotes_html.\
       extend(['<li><a href="{0}">{1}</a>'.\
-              format(url_for('quote_info',quote_id=i),i) 
+              format(url_for('quotes.quote_info',quote_id=i),i) 
                 for i in quotes_list])
     quotes_html.append('<ul>')
     project_record['quotes_list'] = ''.join(quotes_html)
@@ -109,9 +110,10 @@ def project_info(project_id):
              project_list=project_record)
   except Exception as e:
     flash('Failed request')
-    return redirect(url_for('project_home'))
+    print(e)
+    return None
 
-@projects.route('/samples/<project_id>',methods=('GET'))
+@projects.route('/samples/<project_id>',methods=('GET',))
 def project_samples_info(project_id):
   try:
     samples_per_page=10
@@ -131,9 +133,9 @@ def project_samples_info(project_id):
              project_list=samples_list)
   except Exception as _:
     flash('Failed request')
-    return redirect(url_for('project_home'))
+    return None
 
-@projects.route('/libraries/<project_id>',methods=('GET'))
+@projects.route('/libraries/<project_id>',methods=('GET',))
 def project_library_info(project_id):
   try:
     libraries_per_page=10
@@ -153,4 +155,4 @@ def project_library_info(project_id):
     return render_template('project/project_home.html',project_list=libraries_list)
   except Exception as _:
     flash('Failed request')
-    return redirect(url_for('project_home'))
+    return None

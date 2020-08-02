@@ -8,17 +8,17 @@ class Samplesheet_line_form(FlaskForm):
     SelectField(
       'Lane',
       choices=[(str(i),str(i)) for i in range(1,9)],
-      validators=[validators.DataRequired()])
+      validators=[])
   project_name = \
     SelectField(
       'Project name',
       choices=[],
-      validators=[validators.DataRequired()])
+      validators=[])
   pool_id = \
     SelectField(
       'Pool id',
       choices=[(str(i),str(i)) for i in range(1,11)],
-      validators=[validators.DataRequired()])
+      validators=[])
 
 class Samplesheet_file_form(FlaskForm):
   run_name = \
@@ -75,13 +75,13 @@ class Samplesheet_file_form(FlaskForm):
       'Adepter 1',
       default='AGATCGGAAGAGCACACGTCTGAACTCCAGTCA',
       validators=[validators.DataRequired(),
-                  validators.Length(max=30)])
+                  validators.Length(max=50)])
   adapter2_seq = \
     StringField(
       'Adepter 2',
       default='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT',
       validators=[validators.DataRequired(),
-                  validators.Length(max=30)])
+                  validators.Length(max=50)])
   rows = \
     FieldList(
       FormField(
