@@ -19,5 +19,13 @@ def create_app(config_name):
 
   from .main import main as main_blueprint
   app.register_blueprint(main_blueprint)
+  from .users import users as user_blueprint
+  app.register_blueprint(user_blueprint,url_prefix='/users')
+  from .projects import projects as projects_blueprint
+  app.register_blueprint(projects_blueprint,url_prefix='/projects')
+  from .quotes import quote as quote_blueprint
+  app.register_blueprint(quote_blueprint,url_prefix='/quotes')
+  from .run import runs as runs_blueprint
+  app.register_blueprint(runs_blueprint,url_prefix='/runs')
 
   return app

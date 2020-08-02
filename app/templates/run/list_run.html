@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}
+  <p>
+    <form method="POST" action="">
+      {{ form.hidden_tag() }}
+      <h5>Create a new run</h5> {{ form.create_button() }}
+    </form>
+  </p>
+  <h5>List of planned runs</h5>
+  <p>
+    <form method="POST" action="">
+      {{ form2.hidden_tag() }}
+      {{ form2.input_field.label }} {{ form2.input_field(size=20) }}
+      {{ form2.search_run() }}
+    </form>
+  </p>
+  <p>
+  {{ pagination.info }}
+  {{ pagination.links }}
+  </p>
+  <p>
+    {{ run_list|safe }}
+  </p>
+  {{ pagination.links }}
+{% endblock %}

@@ -2,21 +2,21 @@
 
 {% block content %}
 {{ super() }}
-        <h2>Search quotes</h2>
+        <h2>Search users</h2>
         <p>
           <form method="POST" action="">
             {{ form.hidden_tag() }}
-            {{ form.legacy_quote_id.label }}<br>{{ form.legacy_quote_id(size=20) }}
+            {{ form.name.label }}<br>{{ form.name(size=30) }}
             <p>
-              {{ form.submit() }}<br><h5>Search quotes</h5>
+              {{ form.submit() }}<br><h5>Search name</h5>
             </p>
           </form>
         </p>
-        <h2>Quotes data</h2>
+        <h2>User info</h2>
         {{ pagination.info }}
         {{ pagination.links }}
         <p>
-        {{ quotes_list|safe }}
+        {{ user_list|safe }}
         </p>
         {{ pagination.links }}
 {% endblock %}

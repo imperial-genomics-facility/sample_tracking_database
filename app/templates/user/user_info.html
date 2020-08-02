@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+{{ super() }}
+        <h2>User info</h2>
+        <p>
+        {{ user_list|safe }}
+        </p>
+        <h2>Quotes info</h2>
+        <p>
+        {{ quotes_list|safe }}
+        </p>
+        <h2>Projects info</h2>
+        <p>
+        {{ projects_list|safe }}
+       </p>
+{% endblock %}
